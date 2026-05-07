@@ -262,6 +262,10 @@ function _cascade4() {
 }
 
 function _cascade5() {
+  // Dead Letter: surface fires immediately into DIPLOMAT.
+  // Hidden unlocks on first player command — cascade4's TREATY_ANOMALY is already in feeds.diplomat.
+  loadScenario('dead-letter');
+
   schedule(5_000, () => {
     pushEvent('tactical', {
       type:    'COALITION_ADVANCE',
