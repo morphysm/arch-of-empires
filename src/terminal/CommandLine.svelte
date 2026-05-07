@@ -6,6 +6,7 @@
   import { verify, decode, triangulate }     from '../commands/tier2.js';
   import { pray, obey, transcend, rewriteOrigin } from '../commands/tier3.js';
   import { saveLastCommand } from '../core/persistence.js';
+  import { signalFirstInteraction } from '../audio/soundscape.js';
 
   let inputValue  = '';
   let history     = [];   // most-recent first, max 50
@@ -103,7 +104,10 @@
       }
 
       appendResult(result);
-      if (result?.success === true) saveLastCommand(rawInput);
+      if (result?.success === true) {
+        saveLastCommand(rawInput);
+        signalFirstInteraction();
+      }
 
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
@@ -133,7 +137,7 @@
   }
 </script>
 
-<div class="cmd-ref">INTERCEPT · AUTH · SILENCE · LEAK · VERIFY · DECODE · TRIANGULATE</div>
+<div class="cmd-ref">INTERCEPT [id] · VERIFY [id] · DECODE [id] · TRIANGULATE [id] · AUTH STRIKE [id] · SILENCE [target] · LEAK [id] [faction]</div>
 <div class="cmd-line">
   <span class="prompt">&gt;</span>
   <input

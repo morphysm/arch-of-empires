@@ -9,7 +9,11 @@
     bandwidth, awareness, nature, feeds, anomalies,
   } from '../core/store.js';
   import { resolveTerminalState } from '../endgame/terminalStates.js';
-  import { initSoundscape, playFeedEvent, playDoctrinal, corruptSoundLayer, stopSoundscape } from '../audio/soundscape.js';
+  import {
+    initSoundscape, playFeedEvent, playDoctrinal, corruptSoundLayer, stopSoundscape,
+    setVoiceMode, speakTacticalEvent, updateVoiceCoherence, speakTerminalStateResolution,
+    startConnectionSequence,
+  } from '../audio/soundscape.js';
   import { startShift } from '../scenarios/campaign.js';
 
   // ── Per-mode corruption config ─────────────────────────────────
@@ -147,6 +151,7 @@
     coherence.set(100);
     _prevDiplomat = _prevTactical = _prevSigint = _prevManifestations = 0;
     _doctrinalFired = false;
+    _terminalStateSpeaking = false;
     menuOpen = false;
     startShift(1);
   }
@@ -175,12 +180,14 @@
     // Reset coherence display whenever the real value changes
     unsubCoherence = coherence.subscribe(val => {
       coherenceDisplay = `COHERENCE: ${val}%`;
+      updateVoiceCoherence(val);
     });
 
     // Subscribe to mode — fires immediately (initializes timers)
     // and on every mode change (restarts timers with new config)
     unsubMode = terminalMode.subscribe(mode => {
       startTimers(mode);
+      setVoiceMode(mode);
     });
 
     // Corrupt the sound layer whenever a new anomaly manifests
@@ -193,6 +200,7 @@
 
     const enterFullscreen = async () => {
       await initSoundscape();
+      startConnectionSequence();
       document.documentElement.requestFullscreen().catch(() => {});
       document.removeEventListener('click', enterFullscreen);
     };
@@ -216,6 +224,13 @@
   // ── Endgame screen ─────────────────────────────────────────────
   $: endgame = resolveTerminalState($terminalState, $nature);
 
+  // ── Terminal state voice — fires once when state is first set ──
+  let _terminalStateSpeaking = false;
+  $: if ($terminalState && !_terminalStateSpeaking) {
+    _terminalStateSpeaking = true;
+    speakTerminalStateResolution($terminalState);
+  }
+
   // ── Soundscape: feed event audio ───────────────────────────────
   // Fire sounds reactively when new events arrive in each feed.
   let _prevDiplomat = 0;
@@ -231,7 +246,9 @@
   }
   $: {
     if ($feeds.tactical.length > _prevTactical) {
+      const newTactical = $feeds.tactical.slice(_prevTactical);
       playFeedEvent('TACTICAL');
+      newTactical.forEach(e => speakTacticalEvent(e));
       _prevTactical = $feeds.tactical.length;
     }
   }

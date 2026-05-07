@@ -22,6 +22,10 @@ vi.mock('../src/endgame/terminalStates.js', () => ({
   checkEndgameConditions: vi.fn().mockReturnValue(null),
   resolveTerminalState:   vi.fn().mockReturnValue(null),
 }));
+vi.mock('../src/audio/soundscape.js', () => ({
+  speakBreachAnnouncement: vi.fn(),
+  startVoiceCountdown:     vi.fn(),
+}));
 
 import { advance }                           from '../src/core/clock.js';
 import { triggerDoctrinal }                  from '../src/feeds/doctrinal.js';
@@ -129,7 +133,8 @@ describe('startShift() — ghost command injection', () => {
 
   it('ghost event type is INTERCEPT', async () => {
     loadLastCommand.mockResolvedValue('AUTH STRIKE abc');
-    await startShift(2);
+    await startShift(1);
+    // ghost command is prepended before the system briefing
     expect(get(feeds).sigint[0].type).toBe('INTERCEPT');
   });
 
@@ -139,10 +144,12 @@ describe('startShift() — ghost command injection', () => {
     expect(get(feeds).sigint[0].source).toBe('KIA // AGENT: UNKNOWN');
   });
 
-  it('injects nothing when loadLastCommand returns null', async () => {
+  it('injects no ghost command when loadLastCommand returns null', async () => {
     loadLastCommand.mockResolvedValue(null);
     await startShift(1);
-    expect(get(feeds).sigint).toHaveLength(0);
+    // sys-001 briefing is always present; no ghost command event
+    const ghostEvents = get(feeds).sigint.filter(e => e.isGhost);
+    expect(ghostEvents).toHaveLength(0);
   });
 
   it('ghost event is prepended — sits before any cascade events', async () => {

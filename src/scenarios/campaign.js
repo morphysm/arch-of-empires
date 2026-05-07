@@ -9,16 +9,19 @@ import { triggerDoctrinal, resetShiftTracking } from '../feeds/doctrinal.js';
 import { loadGhostSignals, loadLastCommand }  from '../core/persistence.js';
 import { loadScenario, endShift as engineEndShift } from '../scenarios/engine.js';
 import { checkEndgameConditions, resolveTerminalState } from '../endgame/terminalStates.js';
+import { speakBreachAnnouncement, startVoiceCountdown } from '../audio/soundscape.js';
 
 // ── Module state ───────────────────────────────────────────────────────────
 
 let _cascadeTimers = [];
 let _lastEndgame   = null;
+let _evtCounter    = 0;  // sequential short IDs so players can type them
 
 export function _resetCampaignForTesting() {
   _cascadeTimers.forEach(id => clearTimeout(id));
   _cascadeTimers = [];
   _lastEndgame = null;
+  _evtCounter  = 0;
 }
 
 export function _getCascadeTimerCount() {
@@ -32,17 +35,19 @@ export function getLastEndgame() {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function pushEvent(feedName, partial) {
+  const { id: explicitId, ...rest } = partial;
+  const id = explicitId ?? `evt-${String(++_evtCounter).padStart(3, '0')}`;
   feeds.update(s => ({
     ...s,
     [feedName]: [
       ...s[feedName],
       {
-        id:          crypto.randomUUID(),
+        id,
         timestamp:   get(clock).time,
         shift:       get(currentShift),
         anomalyFlag: false,
         verified:    false,
-        ...partial,
+        ...rest,
       },
     ],
   }));
@@ -60,6 +65,7 @@ function clearTimers() {
 }
 
 async function injectGhostCommand(shiftNum) {
+  if (shiftNum !== 1) return null; // ghost from previous run appears once, at the very start
   const lastCommand = await loadLastCommand();
   if (lastCommand === null) return null;
   feeds.update(s => ({
@@ -100,11 +106,40 @@ export async function startShift(shiftNum) {
   await loadGhostSignals();
   await injectGhostCommand(shiftNum);
 
+  if (shiftNum === 1) {
+    // DIPLOMAT — mission context
+    pushEvent('diplomat', {
+      id:   'brief-d01',
+      type: 'BRIEFING',
+      content: 'SHIFT 1 OF 10. GEOPOLITICAL SITUATION: UNSTABLE. MONITOR ALL FEEDS. AWAIT INCOMING SIGNALS.',
+    });
+
+    // TACTICAL — what to expect
+    pushEvent('tactical', {
+      id:   'brief-t01',
+      type: 'BRIEFING',
+      content: 'EVENTS WILL APPEAR IN THIS FEED. EACH CARRIES AN ID IN BRACKETS. USE THAT ID TO RESPOND.',
+    });
+
+    // SIGINT — command reference
+    pushEvent('sigint', {
+      id:   'sys-001',
+      type: 'SYSTEM',
+      content: 'COMMANDS: INTERCEPT [id] · VERIFY [id] · DECODE [id] · TRIANGULATE [id] · AUTH STRIKE [id] · SILENCE [target] · LEAK [id] [faction]',
+    });
+    pushEvent('sigint', {
+      id:   'sys-002',
+      type: 'SYSTEM',
+      content: 'EXAMPLE: when you see [evt-002] in TACTICAL, type — VERIFY evt-002 — and press ENTER.',
+    });
+  }
+
   if (shiftNum === 4) drawAspects();
 
   // Shift 10: breach fires after 60 real seconds — no cascade event timers
   if (shiftNum === 10) {
     schedule(60_000, () => triggerBreach(10));
+    startVoiceCountdown();
   }
 
   runCascade(shiftNum);
@@ -365,6 +400,8 @@ function _cascade9() {
 // ── Breach handlers ────────────────────────────────────────────────────────
 
 function _breach(shiftNum) {
+  if (shiftNum !== 10) speakBreachAnnouncement(shiftNum);
+
   switch (shiftNum) {
     case 1:
       advance(5, 'FAILED_DIPLOMACY');

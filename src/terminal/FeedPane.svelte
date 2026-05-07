@@ -39,6 +39,7 @@
               class="evt-type"
               style="color: {event.anomalyFlag ? 'var(--color-alert)' : 'var(--color-text)'};"
             >{event.type}</span>
+            <span class="evt-id">[{event.id}]</span>
             <span class="evt-verified">{event.verified ? '✓' : ''}</span>
             <span class="evt-content">{event.content}</span>
           </div>
@@ -86,6 +87,14 @@
     min-width: 12ch;
     font-weight: bold;
     color: var(--color-text);
+  }
+
+  .evt-id {
+    flex-shrink: 0;
+    color: var(--color-text-dim);
+    font-size: 0.88em;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
   }
 
   .evt-verified {

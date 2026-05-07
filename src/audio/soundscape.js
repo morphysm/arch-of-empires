@@ -25,6 +25,11 @@ let _countdownInterval = null;
 let _nmccDriftInterval = null;
 let _voiceMaster       = null;  // Tone.Volume +6dB — voice is foreground
 let _nmccDeathSpoken   = false; // guard: speak the Death fragment only once
+let _voices              = [];    // available SpeechSynthesis voices, loaded async
+let _handshakeFired      = false; // guard: handshake plays only once per session
+let _connectionActive    = false; // true while pre-interaction loop is running
+let _connectionTimer     = null;  // setTimeout handle for the connection sequence
+let _sustainNode         = null;  // quiet carrier tone after second handshake
 
 // ── Init ───────────────────────────────────────────────────────────────────
 
@@ -209,6 +214,15 @@ export function stopSoundscape() {
   });
   _voiceChainHP = _voiceChainLP = _voiceChainDist = _voiceStaticNoise = _voiceMaster = null;
   _nmccDeathSpoken = false;
+  _handshakeFired   = false;
+  _connectionActive = false;
+  clearTimeout(_connectionTimer);
+  _connectionTimer  = null;
+  if (_sustainNode) {
+    try { _sustainNode.stop(); _sustainNode.dispose(); } catch {}
+    _sustainNode = null;
+  }
+  _voices = [];
 
   _ready = false;
   _corruptionLevel = 0;
@@ -264,24 +278,83 @@ function _initVoiceChain() {
   _voiceChainLP   = new Tone.Filter({ type: 'lowpass',  frequency: 3000, rolloff: -12 });
   _voiceChainDist = new Tone.Distortion(0.4);
 
-  // +6dB master — voice layer is foreground, louder than relay clicks and static
-  _voiceMaster = new Tone.Volume(6);
+  // Wire chain to output — radio clicks and handshake route through this
+  _voiceChainHP.chain(_voiceChainLP, _voiceChainDist, Tone.getDestination());
 
-  // Pink noise at −26dB (≈ 0.05 amplitude) through the full filter chain then master
-  _voiceStaticNoise = new Tone.Noise({ type: 'pink', volume: -26 });
-  _voiceStaticNoise.chain(_voiceChainHP, _voiceChainLP, _voiceChainDist, _voiceMaster, Tone.getDestination());
-  _voiceStaticNoise.start();
+  // Load TTS voices (async on some browsers)
+  _loadVoices();
 
   _voiceActive = true;
 }
 
+function _loadVoices() {
+  if (!('speechSynthesis' in window)) return;
+  _voices = window.speechSynthesis.getVoices();
+  if (_voices.length === 0) {
+    window.speechSynthesis.onvoiceschanged = () => {
+      _voices = window.speechSynthesis.getVoices();
+    };
+  }
+}
+
+function _getBestVoice() {
+  if (_voices.length === 0) return null;
+  // Male voices first — "Google US English" is female in Chrome, skip it.
+  const preferred = [
+    'Google UK English Male',  // Chrome — deep, clear
+    'Microsoft David Desktop', // Windows
+    'Microsoft David',
+    'Alex',    // macOS — deep, natural
+    'Daniel',  // macOS UK — measured, authoritative
+    'Tom',     // macOS US
+    'Fred',    // macOS legacy
+    'Mark',    // Windows
+  ];
+  for (const pref of preferred) {
+    const match = _voices.find(v => v.name.includes(pref));
+    if (match) return match;
+  }
+  // Fallback: any English voice with "Male" in the name
+  const maleMatch = _voices.find(v =>
+    v.lang.startsWith('en') && v.name.toLowerCase().includes('male')
+  );
+  if (maleMatch) return maleMatch;
+  // Last resort: English, avoid known female names
+  const femaleTerms = ['zira', 'hazel', 'susan', 'female', 'woman', 'samantha', 'victoria', 'karen'];
+  return (
+    _voices.find(v =>
+      v.lang.startsWith('en') &&
+      !femaleTerms.some(f => v.name.toLowerCase().includes(f))
+    ) ?? _voices.find(v => v.lang.startsWith('en')) ?? null
+  );
+}
+
+function _playRadioClick() {
+  if (!_ready || !_voiceChainHP) return;
+  // Brief filtered noise burst — simulates PTT (push-to-talk) click on radio
+  const click = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: 0.018, sustain: 0, release: 0.008 },
+    volume: -14,
+  });
+  click.connect(_voiceChainHP); // through the radio narrowband filter
+  click.triggerAttackRelease('32n');
+  disposeAfter(click, 200);
+}
+
 function _speak(text, opts = {}) {
   if (!_voiceActive || !('speechSynthesis' in window)) return;
-  const utt  = new SpeechSynthesisUtterance(text);
-  utt.rate   = opts.rate   ?? 0.85;
-  utt.pitch  = opts.pitch  ?? 0.9;
-  utt.volume = opts.volume ?? 1.0;
-  utt.onend  = () => { _utteranceSpeaking = false; _drainVoiceQueue(); };
+
+  if (opts.click !== false) _playRadioClick();
+
+  const utt   = new SpeechSynthesisUtterance(text);
+  utt.lang    = 'en-US';
+  utt.rate    = opts.rate   ?? 0.82;
+  utt.pitch   = opts.pitch  ?? 0.88;
+  utt.volume  = opts.volume ?? 1.0;
+  const voice = _getBestVoice();
+  if (voice) utt.voice = voice;
+  utt.onend   = () => { _utteranceSpeaking = false; _drainVoiceQueue(); };
   _utteranceQueue.push(utt);
   _drainVoiceQueue();
 }
@@ -388,6 +461,105 @@ export function stopVoiceCountdown() {
 }
 
 /**
+ * Diegetic loading screen — V.22 modem handshake sequence.
+ * Carrier → FSK negotiation tones → data noise → handshake confirmed.
+ * All routed through the radio narrowband filter chain.
+ */
+export function playHandshake() {
+  if (!_ready || !_voiceChainHP) return;
+  const now = Tone.now();
+  const dest = _voiceChainHP; // route through radio filter chain
+
+  // Phase 1: Carrier dial tone — 425Hz, 400ms
+  const dial = new Tone.Oscillator({ frequency: 425, type: 'sine', volume: -20 });
+  dial.connect(dest);
+  dial.start(now);
+  dial.stop(now + 0.4);
+  disposeAfter(dial, 600);
+
+  // Phase 2: FSK negotiation — 14 alternating pulses of 2100Hz / 1300Hz
+  // V.22 modem handshake signature — the characteristic screeching
+  const fskStart  = now + 0.52;
+  const pulseLen  = 0.09;
+  const pulseGap  = 0.015;
+  for (let i = 0; i < 14; i++) {
+    const freq = i % 2 === 0 ? 2100 : 1300;
+    const t    = fskStart + i * (pulseLen + pulseGap);
+    const osc  = new Tone.Oscillator({ frequency: freq, type: 'sine', volume: -12 });
+    osc.connect(dest);
+    osc.start(t);
+    osc.stop(t + pulseLen);
+    disposeAfter(osc, Math.ceil((t - now + pulseLen + 0.3) * 1000));
+  }
+
+  // Phase 3: Data noise rush — the "connected" sound
+  const noiseStart = fskStart + 14 * (pulseLen + pulseGap) + 0.06;
+  const noiseNode  = new Tone.Noise({ type: 'pink', volume: -20 });
+  noiseNode.connect(dest);
+  noiseNode.start(noiseStart);
+  noiseNode.stop(noiseStart + 0.55);
+  disposeAfter(noiseNode, Math.ceil((noiseStart - now + 0.85) * 1000));
+
+  // Phase 4: Handshake confirmed — two short 1004Hz tones
+  const connStart = noiseStart + 0.65;
+  [0, 0.18].forEach(offset => {
+    const t    = connStart + offset;
+    const tone = new Tone.Oscillator({ frequency: 1004, type: 'sine', volume: -20 });
+    tone.connect(dest);
+    tone.start(t);
+    tone.stop(t + 0.12);
+    disposeAfter(tone, Math.ceil((t - now + 0.2) * 1000));
+  });
+}
+
+/**
+ * Called after audio context starts (first click).
+ * Plays handshake immediately, then again after a pause, then sustains
+ * a quiet carrier until the player sends their first command.
+ */
+export function startConnectionSequence() {
+  if (_connectionActive || !_ready) return;
+  _connectionActive = true;
+
+  // First handshake immediately
+  playHandshake();
+
+  // Second handshake after ~6s (first handshake ~4s + 2s pause)
+  _connectionTimer = setTimeout(() => {
+    if (!_connectionActive) return;
+    playHandshake();
+
+    // After second handshake ends, sustain a quiet carrier until first command
+    _connectionTimer = setTimeout(() => {
+      if (!_connectionActive || !_voiceChainHP) return;
+      _sustainNode = new Tone.Noise({ type: 'pink', volume: -42 });
+      _sustainNode.connect(_voiceChainHP);
+      _sustainNode.start();
+    }, 4500);
+  }, 6000);
+}
+
+/**
+ * Called on first successful player command.
+ * Stops the connection sequence and cuts the carrier.
+ */
+export function signalFirstInteraction() {
+  if (!_connectionActive && _handshakeFired) return;
+  _connectionActive = false;
+  _handshakeFired   = true;
+  clearTimeout(_connectionTimer);
+  _connectionTimer = null;
+
+  if (_sustainNode) {
+    _sustainNode.volume.rampTo(-60, 0.4);
+    setTimeout(() => {
+      try { _sustainNode?.stop(); _sustainNode?.dispose(); } catch {}
+      _sustainNode = null;
+    }, 500);
+  }
+}
+
+/**
  * NMCC coherence degradation.
  * At < 30: distortion increases to 0.6.
  * At < 15: Death fragment spoken once, then filter drifts ±200Hz every 4 seconds.
@@ -434,17 +606,15 @@ export function speakTerminalStateResolution(state) {
   utt.volume = 1.0;
 
   utt.onend = () => {
-    // Cuts to static over 2 seconds, then silence
-    if (_voiceStaticNoise) {
-      _voiceStaticNoise.volume.rampTo(-8, 0.3);   // brief static surge
-      setTimeout(() => {
-        _voiceStaticNoise?.volume.rampTo(-60, 2); // 2-second cut to silence
-        setTimeout(() => {
-          try { _voiceStaticNoise?.stop(); _voiceStaticNoise?.dispose(); } catch {}
-          _voiceStaticNoise = null;
-        }, 2500);
-      }, 400);
-    }
+    // One-shot static burst → 2-second cut to silence
+    if (!_ready || !_voiceChainHP) return;
+    const staticNode = new Tone.Noise({ type: 'pink', volume: -8 });
+    staticNode.connect(_voiceChainHP);
+    staticNode.start();
+    staticNode.volume.rampTo(-60, 2);
+    setTimeout(() => {
+      try { staticNode.stop(); staticNode.dispose(); } catch {}
+    }, 2500);
   };
 
   window.speechSynthesis.speak(utt);
