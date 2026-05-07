@@ -195,6 +195,10 @@ function _cascade1() {
 }
 
 function _cascade2() {
+  // Oracle Array: surface fires immediately into SIGINT predicting the launch below.
+  // Hidden unlocks when the LAUNCH_DETECTED event appears in TACTICAL (5s in).
+  loadScenario('oracle-array');
+
   schedule(5_000, () => pushEvent('tactical', {
     type:    'LAUNCH_DETECTED',
     origin:  'UNKNOWN',
