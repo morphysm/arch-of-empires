@@ -32,8 +32,8 @@
   --color-highlight-text: #000000;
   --color-alert:          #ff6600;
   --font-primary:         'Glass TTY VT220', monospace;
-  --font-size:            13px;
-  --line-height:          1.2;
+  --font-size:            50px;
+  --line-height:          1.35;
 
   /* Header and status bar — distinct from generic highlight in VT220 */
   --color-header-bg:      #ffb000;

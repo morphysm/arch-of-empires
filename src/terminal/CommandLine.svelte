@@ -13,6 +13,8 @@
   let historyIdx  = -1;   // -1 = not browsing history
   let inputEl;
 
+  $: inputValue = inputValue.toUpperCase();
+
   onMount(() => inputEl?.focus());
 
   // ── Store helpers ─────────────────────────────────────────────
@@ -53,7 +55,7 @@
   function tabComplete(input) {
     const upper = input.toUpperCase();
     const matches = COMPLETIONS.filter(c => c.startsWith(upper));
-    if (matches.length === 0) return input;
+    if (matches.length === 0) return upper;
     if (matches.length === 1) return matches[0];
     let common = matches[0];
     for (let i = 1; i < matches.length; i++) {
@@ -188,6 +190,7 @@
     line-height: var(--line-height);
     color: var(--color-statusbar-text, var(--color-highlight-text));
     caret-color: var(--color-statusbar-text, var(--color-highlight-text));
+    text-transform: uppercase;
     padding: 0;
     width: 100%;
   }
