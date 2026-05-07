@@ -228,6 +228,10 @@ function _cascade3() {
 // ── Act 2 — Shifts 4–7: The System Fractures ──────────────────────────────
 
 function _cascade4() {
+  // Numbered Stations: surface fires immediately into SIGINT.
+  // Hidden unlocks on next player command after any SIGINT anomaly appears (Marcus Yao at +5s).
+  loadScenario('numbered-stations');
+
   schedule(5_000, () => {
     pushEvent('sigint', {
       type:        'AUTH_ANOMALY',
