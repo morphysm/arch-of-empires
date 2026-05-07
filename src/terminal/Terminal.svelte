@@ -12,7 +12,7 @@
   import {
     initSoundscape, playFeedEvent, playDoctrinal, corruptSoundLayer, stopSoundscape,
     setVoiceMode, speakTacticalEvent, updateVoiceCoherence, speakTerminalStateResolution,
-    startConnectionSequence,
+    startConnectionSequence, resetVoiceForNewRun,
   } from '../audio/soundscape.js';
   import { startShift } from '../scenarios/campaign.js';
 
@@ -154,6 +154,7 @@
     _doctrinalFired = false;
     _terminalStateSpeaking = false;
     menuOpen = false;
+    resetVoiceForNewRun();
     startShift(1);
   }
 

@@ -543,6 +543,31 @@ export function startConnectionSequence() {
  * Called on first successful player command.
  * Stops the connection sequence and cuts the carrier.
  */
+/**
+ * Hard reset of all voice state for a new run.
+ * Cancels in-flight speech, clears queue, resets per-run flags,
+ * and restarts the connection sequence.
+ */
+export function resetVoiceForNewRun() {
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  _utteranceQueue.length = 0;
+  _utteranceSpeaking = false;
+
+  _connectionActive = false;
+  clearTimeout(_connectionTimer);
+  _connectionTimer = null;
+  if (_sustainNode) {
+    try { _sustainNode.stop(); _sustainNode.dispose(); } catch {}
+    _sustainNode = null;
+  }
+
+  _handshakeFired  = false;
+  _nmccDeathSpoken = false;
+
+  // Restart connection sequence for the new run
+  startConnectionSequence();
+}
+
 export function signalFirstInteraction() {
   if (!_connectionActive && _handshakeFired) return;
   _connectionActive = false;
