@@ -143,6 +143,7 @@
   let pauseEl;
 
   function newRun() {
+    clock.update(c => ({ ...c, time: '11:54:00', debtLedger: [] }));
     feeds.set({ diplomat: [], tactical: [], sigint: [], doctrinal: [] });
     awareness.set(0);
     nature.set({ system: 0, prophet: 0, antichrist: 0, martyr: 0 });
@@ -160,7 +161,10 @@
     e.stopPropagation(); // keep menu keys out of the global handler
     if (e.key === 'Escape' || e.key === 'r' || e.key === 'R') { menuOpen = false; }
     else if (e.key === 'n' || e.key === 'N') { newRun(); }
-    else if (e.key === 'q' || e.key === 'Q') { window.close(); }
+    else if (e.key === 'q' || e.key === 'Q') {
+      document.exitFullscreen?.().catch(() => {});
+      window.location.replace('about:blank');
+    }
   }
 
   function handleGlobalKeydown(e) {

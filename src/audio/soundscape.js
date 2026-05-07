@@ -597,13 +597,29 @@ export function speakTerminalStateResolution(state) {
   if (!_voiceActive) return;
   _cancelVoice();
 
+  // MIDNIGHT: no voice — just 5 seconds of pink noise fading to silence
+  if (state === 'MIDNIGHT') {
+    if (!_ready || !_voiceChainHP) return;
+    const staticNode = new Tone.Noise({ type: 'pink', volume: -6 });
+    staticNode.connect(_voiceChainHP);
+    staticNode.start();
+    staticNode.volume.rampTo(-60, 5);
+    setTimeout(() => {
+      try { staticNode.stop(); staticNode.dispose(); } catch {}
+    }, 5500);
+    return;
+  }
+
   const text = TERMINAL_VOICE[state];
   if (!text) return;
 
-  const utt  = new SpeechSynthesisUtterance(text);
-  utt.rate   = 0.75;
-  utt.pitch  = 0.85;
-  utt.volume = 1.0;
+  const utt   = new SpeechSynthesisUtterance(text);
+  utt.lang    = 'en-US';
+  utt.rate    = 0.75;
+  utt.pitch   = 0.85;
+  utt.volume  = 1.0;
+  const voice = _getBestVoice();
+  if (voice) utt.voice = voice;
 
   utt.onend = () => {
     // One-shot static burst → 2-second cut to silence

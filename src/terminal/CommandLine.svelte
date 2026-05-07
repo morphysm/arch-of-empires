@@ -154,7 +154,8 @@
 <style>
   .cmd-ref {
     padding: 0.15em 0.5em;
-    color: var(--color-text-dim);
+    color: var(--color-statusbar-text, var(--color-highlight-text));
+    opacity: 0.7;
     font-family: var(--font-primary);
     font-size: var(--font-size);
     white-space: nowrap;
@@ -173,7 +174,7 @@
     flex-shrink: 0;
     font-family: var(--font-primary);
     font-size: var(--font-size);
-    color: #000000;
+    color: var(--color-statusbar-text, var(--color-highlight-text));
     line-height: var(--line-height);
   }
 
@@ -185,8 +186,8 @@
     font-family: var(--font-primary);
     font-size: var(--font-size);
     line-height: var(--line-height);
-    color: #000000;
-    caret-color: #000000;
+    color: var(--color-statusbar-text, var(--color-highlight-text));
+    caret-color: var(--color-statusbar-text, var(--color-highlight-text));
     padding: 0;
     width: 100%;
   }
