@@ -1,0 +1,122 @@
+/* ── Font ────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Glass TTY VT220';
+  src: url('/fonts/GlassTTYVT220.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* ── Root fallback — matches VT220 so there is no unstyled flash ─── */
+:root {
+  --color-bg:             #0d0a00;
+  --color-text:           #ffb000;
+  --color-text-dim:       #c47a00;
+  --color-text-corrupt:   #ff6600;
+  --color-highlight-bg:   #ffb000;
+  --color-highlight-text: #000000;
+  --color-alert:          #ff6600;
+  --font-primary:         'Glass TTY VT220', monospace;
+  --font-size:            13px;
+  --line-height:          1.2;
+  /* Corrupt color for the header bar — must contrast with --color-highlight-bg */
+  --color-header-corrupt: #ff6600;
+}
+
+/* ── VT220 — amber phosphor (default) ───────────────────────────── */
+.mode-vt220 {
+  --color-bg:             #0d0a00;
+  --color-text:           #ffb000;
+  --color-text-dim:       #c47a00;
+  --color-text-corrupt:   #ff6600;
+  --color-highlight-bg:   #ffb000;
+  --color-highlight-text: #000000;
+  --color-alert:          #ff6600;
+  --font-primary:         'Glass TTY VT220', monospace;
+  --font-size:            13px;
+  --line-height:          1.2;
+
+  /* Header and status bar — distinct from generic highlight in VT220 */
+  --color-header-bg:      #ffb000;
+  --color-header-text:    #000000;
+  --color-statusbar-bg:   #c47a00;
+  --color-statusbar-text: #000000;
+
+  --color-border:         #3d2800;
+  /* Orange on amber header — visible, "phosphor burning" */
+  --color-header-corrupt: #ff6600;
+
+  /* Phosphor glow — set on root, inherited by all text */
+  text-shadow: 0 0 8px rgba(255, 176, 0, 0.4);
+}
+
+/* ── ANYK7 — green phosphor ─────────────────────────────────────── */
+.mode-anyk7 {
+  --color-bg:             #000d00;
+  --color-text:           #00ff41;
+  --color-text-dim:       #00aa2a;
+  --color-text-corrupt:   #00ff41;
+  --color-highlight-bg:   #00ff41;
+  --color-highlight-text: #000000;
+  --color-alert:          #ffffff;
+  --font-primary:         'Courier New', monospace;
+  --font-size:            13px;
+  --line-height:          1.15;
+
+  --color-border:         #004d15;
+  /* Black on bright-green header — subtle, just character changes signal interference */
+  --color-header-corrupt: #000000;
+
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.35);
+}
+
+/* ── NMCC — white, sharp, projected light has no bloom ─────────── */
+.mode-nmcc {
+  --color-bg:             #080808;
+  --color-text:           #ffffff;
+  --color-text-dim:       #aaaaaa;
+  --color-text-corrupt:   #ff3300;
+  --color-highlight-bg:   #ff3300;
+  --color-highlight-text: #ffffff;
+  --color-alert:          #ff3300;
+  --font-primary:         'Courier New', monospace;
+  --font-size:            18px;
+  --line-height:          1.4;
+
+  --color-border:         #333333;
+  /* White on red header — high contrast, projection system alarm */
+  --color-header-corrupt: #ffffff;
+
+  text-shadow: none;
+}
+
+/* ── Global reset ───────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-primary);
+  font-size: var(--font-size);
+  line-height: var(--line-height);
+}
+
+#app {
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-dim);
+}
