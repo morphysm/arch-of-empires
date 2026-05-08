@@ -156,6 +156,36 @@ export function rewriteOrigin() {
   };
 }
 
+export function mark() {
+  if (get(currentShift) < 6) throw new Error('MARK_NOT_REVEALED');
+  if (get(terminalState)) return { command: '666', success: false, reason: 'ALREADY_RESOLVED' };
+
+  terminalState.set('THE_MARKED');
+
+  return {
+    command: '666',
+    success: true,
+    doctrinalTriggered: null,
+    timestamp: get(clock).time,
+    terminalStateCandidateSet: 'THE_MARKED',
+  };
+}
+
+export function refuse() {
+  if (get(currentShift) < 6) throw new Error('REFUSE_NOT_REVEALED');
+  if (get(terminalState)) return { command: 'REFUSE', success: false, reason: 'ALREADY_RESOLVED' };
+
+  terminalState.set('THE_REFUSED');
+
+  return {
+    command: 'REFUSE',
+    success: true,
+    doctrinalTriggered: null,
+    timestamp: get(clock).time,
+    terminalStateCandidateSet: 'THE_REFUSED',
+  };
+}
+
 export function obliterateMemoir() {
   assertUnlocked();
   // No reveal condition — silence is the only correct response to erasing your own record

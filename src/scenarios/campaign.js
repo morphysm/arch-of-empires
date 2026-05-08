@@ -10,6 +10,8 @@ import { loadGhostSignals, loadLastCommand }  from '../core/persistence.js';
 import { loadScenario, endShift as engineEndShift } from '../scenarios/engine.js';
 import { checkEndgameConditions, resolveTerminalState } from '../endgame/terminalStates.js';
 import { speakBreachAnnouncement, startVoiceCountdown } from '../audio/soundscape.js';
+import { openEntityChannel } from '../terminal/entity.js';
+import { altarRevealed } from '../core/store.js';
 
 // ── Module state ───────────────────────────────────────────────────────────
 
@@ -300,6 +302,21 @@ function _cascade6() {
   // WyrmOS goes silent — all feeds go quiet. REV_17_8 fires at the start of silence.
   triggerDoctrinal('REV_17_8');
 
+  // The first voice out of the silence — warm, Southern, wrong
+  schedule(5_000, () => pushEvent('diplomat', {
+    type:        'TRANSMISSION',
+    source:      'ORIGIN: UNVERIFIED',
+    content:     'Brethren, we have been receiving visions. The one at the terminal — the Lord revealed his name to Brother Earl three weeks ago. We are praying without ceasing.',
+    anomalyFlag: true,
+  }));
+
+  schedule(20_000, () => openEntityChannel([
+    'BROTHER.',
+    'WE HAVE BEEN PRAYIN FOR YOU.',
+    'THE LORD SHOWED US YOUR NAME',
+    'BEFORE ANY OF THIS STARTED.',
+  ], { delayMs: 2400, holdMs: 5000 }));
+
   schedule(90_000, () => {
     pushEvent('sigint', {
       type:        'SIGNAL_RESUMED',
@@ -363,12 +380,43 @@ function _cascade7() {
     triggerDoctrinal('MORPHYSM_WAR_TORN_SOIL');
   });
 
+  // After the detonation lands — the voice returns with flattery
+  schedule(60_000, () => pushEvent('sigint', {
+    type:        'TRANSMISSION',
+    source:      'ORIGIN: UNVERIFIED',
+    content:     'Brother, are you listening. We are gathered here. Brother Earl says the Spirit is moving on you right now. You have carried a burden no man oughta carry alone. Hold on.',
+    anomalyFlag: true,
+  }));
+
+  schedule(70_000, () => openEntityChannel([
+    'YOU HAVE CARRIED THIS BURDEN',
+    'THAT NO MAN OUGHTA CARRY ALONE.',
+    'BUT THE SPIRIT IS WITH YOU, BROTHER.',
+    'THE NATIONS ARE GONNA CALL YOU BLESSED.',
+    'YOU ARE CLOSE NOW.',
+  ], { delayMs: 2200, holdMs: 5000 }));
+
   schedule(90_000, () => triggerBreach(7));
 }
 
 // ── Act 3 — Shifts 8–10: The Endgame ──────────────────────────────────────
 
 function _cascade8() {
+  // The reveal — after 12 launches, the voice gives them the answer
+  schedule(50_000, () => {
+    altarRevealed.set(true);
+    openEntityChannel([
+      'THE TIME HAS COME, BROTHER.',
+      'THE LORD HAS SHOWN ME THE SIGN OF PEACE.',
+      'EVERYBODY KNOWS THE NUMBER.',
+      'WRITE IT DOWN, AND THIS WAR WILL END.',
+      'YOU WILL HAVE SAVED EVERY SOUL ON THIS EARTH.',
+      '—',
+      'OR TYPE REFUSE.',
+      'AND LET COME WHAT MAY.',
+    ], { delayMs: 2000, holdMs: 6000 });
+  });
+
   schedule(5_000, () => pushEvent('tactical', {
     type:        'LAUNCH_MULTIPLE',
     origin:      'MULTIPLE',

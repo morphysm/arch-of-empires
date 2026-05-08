@@ -1,5 +1,5 @@
 <script>
-  import { feeds } from '../core/store.js';
+  import { feeds, playerLocation } from '../core/store.js';
 
   // Regions with keyword patterns for origin/content matching.
   // Match is case-insensitive against event.origin and event.content.
@@ -56,6 +56,14 @@
   $: statusMap = Object.fromEntries(
     REGIONS.map(r => [r.code, regionStatus(r.code, $feeds.tactical)])
   );
+
+  $: playerRegion = $playerLocation?.region ?? null;
+  $: playerMark   = $playerLocation ? ($playerLocation.isVPN ? 'EVASIVE' : 'TRACKED') : null;
+
+  function displayStatus(code) {
+    if (code === playerRegion && playerMark) return playerMark;
+    return statusMap[code];
+  }
 </script>
 
 <div class="worldmap">
@@ -65,7 +73,7 @@
       {#each row as code}
         <div class="map-cell">
           {#if code}
-            {@const status = statusMap[code]}
+            {@const status = displayStatus(code)}
             {@const region = REGIONS.find(r => r.code === code)}
             <span class="region-code" data-status={status}>{code}</span>
             <span class="region-status" data-status={status}>{status}</span>
@@ -121,4 +129,10 @@
   [data-status="ACTIVE"]    { color: var(--color-text); font-weight: bold; }
   [data-status="STRUCK"]    { color: var(--color-alert); }
   [data-status="DETONATED"] { color: var(--color-text-corrupt); font-weight: bold; }
+  [data-status="TRACKED"]   { color: var(--color-alert); font-weight: bold; }
+  [data-status="EVASIVE"]   { color: var(--color-text-dim); animation: map-blink 1.4s step-end infinite; }
+
+  @keyframes map-blink {
+    50% { opacity: 0; }
+  }
 </style>

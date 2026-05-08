@@ -33,6 +33,16 @@ export const anomalies = writable({
 
 export const terminalState = writable(null);
 
+export const commandCount = writable(0);
+
+// { city, country, region, isVPN } | null
+export const playerLocation = writable(null);
+
+export const entityMode  = writable(false);
+export const entityLines = writable([]);
+
+export const altarRevealed = writable(false);
+
 export const currentShift = writable(0);
 
 export const coherence = writable(100);

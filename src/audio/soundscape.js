@@ -614,6 +614,35 @@ export function updateVoiceCoherence(coherenceValue) {
 }
 
 /**
+ * 8-bit square-wave sting — fires only on THE_MARKED ending.
+ * Original descending minor phrase. Short, final, wrong.
+ */
+export function playMarkMelody() {
+  if (!_ready) return;
+
+  const synth = new Tone.Synth({
+    oscillator: { type: 'square' },
+    envelope:   { attack: 0.005, decay: 0.12, sustain: 0.4, release: 0.3 },
+    volume:     -8,
+  }).toDestination();
+
+  // Original minor descending phrase — E minor, 8-bit game-over feel
+  const phrase = [
+    { note: 'E5',  time: 0.0,  dur: '8n'  },
+    { note: 'D5',  time: 0.28, dur: '8n'  },
+    { note: 'C5',  time: 0.56, dur: '8n'  },
+    { note: 'B4',  time: 0.84, dur: '8n'  },
+    { note: 'G4',  time: 1.12, dur: '4n'  },
+    { note: 'A4',  time: 1.52, dur: '8n'  },
+    { note: 'E4',  time: 1.80, dur: '2n'  },
+  ];
+
+  const now = Tone.now() + 0.3;
+  phrase.forEach(({ note, time, dur }) => synth.triggerAttackRelease(note, dur, now + time));
+  disposeAfter(synth, 4000);
+}
+
+/**
  * Final voice sequence at terminal state resolution.
  * Cancels all queued speech. Speaks the assigned Revelation/Gita fragment,
  * then rises to static, then silence.

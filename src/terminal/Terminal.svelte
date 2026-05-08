@@ -7,12 +7,15 @@
   import {
     clock, coherence, currentShift, terminalState, terminalMode,
     bandwidth, awareness, nature, feeds, anomalies,
+    commandCount, playerLocation, entityMode, entityLines, altarRevealed,
   } from '../core/store.js';
+  import { fetchPlayerLocation } from '../core/geolocate.js';
+  import { closeEntityChannel } from './entity.js';
   import { resolveTerminalState } from '../endgame/terminalStates.js';
   import {
     initSoundscape, playFeedEvent, playDoctrinal, corruptSoundLayer, stopSoundscape,
     setVoiceMode, speakTacticalEvent, updateVoiceCoherence, speakTerminalStateResolution,
-    startConnectionSequence, resetVoiceForNewRun,
+    startConnectionSequence, resetVoiceForNewRun, playMarkMelody,
   } from '../audio/soundscape.js';
   import { startShift } from '../scenarios/campaign.js';
 
@@ -153,6 +156,11 @@
     _prevDiplomat = _prevTactical = _prevSigint = _prevManifestations = 0;
     _doctrinalFired = false;
     _terminalStateSpeaking = false;
+    _geolocateFired = false;
+    commandCount.set(0);
+    playerLocation.set(null);
+    closeEntityChannel();
+    altarRevealed.set(false);
     menuOpen = false;
     resetVoiceForNewRun();
     startShift(1);
@@ -229,11 +237,56 @@
   // ── Endgame screen ─────────────────────────────────────────────
   $: endgame = resolveTerminalState($terminalState, $nature);
 
+  // ── Geolocation — fires once after the 3rd command ───────────
+  let _geolocateFired = false;
+
+  $: if ($commandCount >= 3 && !_geolocateFired) {
+    _geolocateFired = true;
+    triggerGeolocate();
+  }
+
+  function mkGeoEvent(content, anomalyFlag = false) {
+    return {
+      id: crypto.randomUUID(),
+      timestamp: get(clock).time,
+      type: 'GEOLOCATION',
+      content,
+      anomalyFlag,
+      verified: false,
+      isGhost: false,
+      shift: get(currentShift),
+    };
+  }
+
+  async function triggerGeolocate() {
+    const loc = await fetchPlayerLocation();
+    if (!loc) return;
+    playerLocation.set(loc);
+
+    const events = loc.isVPN
+      ? [
+          mkGeoEvent('GEOLOCATION SCAN COMPLETE'),
+          mkGeoEvent('ROUTING ANOMALY — RELAY NODE IDENTIFIED'),
+          mkGeoEvent(`NODE LOCATION: ${loc.city}, ${loc.country}`),
+          mkGeoEvent('OPERATOR ORIGIN: UNRESOLVED'),
+          mkGeoEvent('EVASION PROTOCOL RECOGNIZED — BEHAVIORAL SIGNATURE LOGGED', true),
+        ]
+      : [
+          mkGeoEvent('GEOLOCATION SCAN COMPLETE'),
+          mkGeoEvent(`SIGNAL TRIANGULATED — ISP ORIGIN: ${loc.city}, ${loc.country}`),
+          mkGeoEvent('CONFIDENCE: INSUFFICIENT FOR STRIKE AUTHORIZATION'),
+          mkGeoEvent('TRACKING ACTIVE — REFINEMENT IN PROGRESS', true),
+        ];
+
+    feeds.update(s => ({ ...s, sigint: [...s.sigint, ...events] }));
+  }
+
   // ── Terminal state voice — fires once when state is first set ──
   let _terminalStateSpeaking = false;
   $: if ($terminalState && !_terminalStateSpeaking) {
     _terminalStateSpeaking = true;
     speakTerminalStateResolution($terminalState);
+    if ($terminalState === 'THE_MARKED') playMarkMelody();
   }
 
   // ── Soundscape: feed event audio ───────────────────────────────
@@ -289,24 +342,55 @@
   <!-- ── Scrollable feed stream ─────────────────────────────────── -->
   <main class="feed-stream">
 
-    <section class="feed-section">
-      <div class="feed-sep" style="color: var(--color-text); font-weight: bold;">{seps.diplomat}</div>
-      <FeedPane feedName="DIPLOMAT" events={$feeds.diplomat} />
-    </section>
+    {#if $entityMode}
 
-    <section class="feed-section">
-      <div class="feed-sep" style="color: var(--color-text); font-weight: bold;">{seps.tactical}</div>
-      <FeedPane feedName="TACTICAL" events={$feeds.tactical} />
-    </section>
+      <!-- Entity channel: DIPLOMAT and TACTICAL go dark and redacted.
+           The entity takes the channel where SIGINT was. -->
 
-    <section class="feed-section">
-      <div class="feed-sep" style="color: var(--color-text); font-weight: bold;">{seps.sigint}</div>
-      <FeedPane feedName="SIGINT" events={$feeds.sigint} />
-    </section>
+      <section class="feed-section">
+        <div class="feed-sep feed-sep--dark">{seps.diplomat}</div>
+        <div class="feed-redacted" aria-hidden="true">
+          <div>░░░░░░░░░░░░░░░░░░░ ░░░░░░░░░░░░░░░░░░░░░░░░░</div>
+          <div>░░░░░░░░░░░░ ░░░░░░░░░░░░░░</div>
+          <div>░░░░░░░░░░░░░░░░░░░░░░░░ ░░░░░░░░░░</div>
+        </div>
+      </section>
 
-    <!-- DOCTRINAL feed dissolved — fragments appear inline within the
-         feed that triggered them, ordered by timestamp, no label -->
+      <section class="feed-section">
+        <div class="feed-sep feed-sep--dark">{seps.tactical}</div>
+        <div class="feed-redacted" aria-hidden="true">
+          <div>░░░░░░░░░ ░░░░░░░░░░░░░░░░░░░░░░</div>
+          <div>░░░░░░░░░░░░░░░░░░░░░░░░ ░░░░░░░░░░░░░░</div>
+          <div>░░░░░░░░░░░░ ░░░░░░░░░░░</div>
+        </div>
+      </section>
 
+      <section class="entity-channel">
+        <div class="entity-rule"></div>
+        {#each $entityLines as line (line + $entityLines.indexOf(line))}
+          <div class="entity-line">{line}</div>
+        {/each}
+        <div class="entity-rule"></div>
+      </section>
+
+    {:else}
+
+      <section class="feed-section">
+        <div class="feed-sep" style="color: var(--color-text); font-weight: bold;">{seps.diplomat}</div>
+        <FeedPane feedName="DIPLOMAT" events={$feeds.diplomat} />
+      </section>
+
+      <section class="feed-section">
+        <div class="feed-sep" style="color: var(--color-text); font-weight: bold;">{seps.tactical}</div>
+        <FeedPane feedName="TACTICAL" events={$feeds.tactical} />
+      </section>
+
+      <section class="feed-section">
+        <div class="feed-sep" style="color: var(--color-text); font-weight: bold;">{seps.sigint}</div>
+        <FeedPane feedName="SIGINT" events={$feeds.sigint} />
+      </section>
+
+    {/if}
 
   </main>
 
@@ -524,6 +608,55 @@
     color: var(--color-text-dim);
     text-transform: uppercase;
     text-shadow: none;
+  }
+
+  /* ── Entity channel ─────────────────────────────────────────── */
+
+  .feed-sep--dark {
+    color: var(--color-text-dim) !important;
+    font-weight: normal !important;
+    opacity: 0.4;
+  }
+
+  .feed-redacted {
+    padding: 2px 8px;
+    color: var(--color-text-dim);
+    opacity: 0.25;
+    font-size: 0.9em;
+    letter-spacing: 0.02em;
+    line-height: var(--line-height);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .entity-channel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 2em 0;
+    min-height: 30vh;
+  }
+
+  .entity-rule {
+    border-top: 1px solid var(--color-border);
+    margin: 1.5em 8px;
+    opacity: 0.5;
+  }
+
+  .entity-line {
+    text-align: center;
+    padding: 0.55em 2ch;
+    letter-spacing: 0.18em;
+    color: var(--color-text);
+    font-size: var(--font-size);
+    line-height: 1.8;
+    animation: entity-reveal 600ms ease-in both;
+  }
+
+  @keyframes entity-reveal {
+    from { opacity: 0; letter-spacing: 0.35em; }
+    to   { opacity: 1; letter-spacing: 0.18em; }
   }
 
   /* ── NMCC line shift — global, targets FeedPane event lines ── */

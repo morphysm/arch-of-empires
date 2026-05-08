@@ -67,6 +67,26 @@ const STATE_SCREENS = {
       'Nothing else will happen.',
     ],
   },
+  THE_MARKED: {
+    heading: 'SIX HUNDRED THREESCORE AND SIX',
+    body: [
+      'Well done.',
+      'You have been marked with 666, the number of the beast.',
+      'Humankind will start its new era.',
+      'Go on now.',
+      'You are free.',
+    ],
+  },
+  THE_REFUSED: {
+    heading: 'REFUSED',
+    body: [
+      'You refused the mark.',
+      'The world detonated.',
+      'No new era.',
+      'No beast.',
+      'Just fire.',
+    ],
+  },
 };
 
 // ── Condition checks ───────────────────────────────────────────────────────

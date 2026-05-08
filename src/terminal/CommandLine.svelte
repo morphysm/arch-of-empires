@@ -1,10 +1,10 @@
 <script>
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
-  import { feeds, clock, currentShift } from '../core/store.js';
+  import { feeds, clock, currentShift, commandCount } from '../core/store.js';
   import { intercept, auth, silence, leak } from '../commands/tier1.js';
   import { verify, decode, triangulate }     from '../commands/tier2.js';
-  import { pray, obey, transcend, rewriteOrigin } from '../commands/tier3.js';
+  import { pray, obey, transcend, rewriteOrigin, mark, refuse } from '../commands/tier3.js';
   import { saveLastCommand } from '../core/persistence.js';
   import { signalFirstInteraction } from '../audio/soundscape.js';
 
@@ -75,6 +75,7 @@
       history    = [raw, ...history].slice(0, 50);
       historyIdx = -1;
       inputValue = '';
+      commandCount.update(n => n + 1);
 
       const upper = raw.toUpperCase();
       const parts = upper.split(/\s+/);
@@ -95,6 +96,8 @@
           case 'OBEY':           result = obey();                     break;
           case 'TRANSCEND':      result = transcend();                break;
           case 'REWRITE_ORIGIN': result = rewriteOrigin();            break;
+          case '666':            result = mark();                    break;
+          case 'REFUSE':         result = refuse();                  break;
           default:
             appendSigint('SYSTEM', `COMMAND NOT RECOGNIZED: ${raw}`, false);
             return;
