@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { get } from 'svelte/store';
 import {
   clock, bandwidth, currentShift, feeds,
-  terminalMode, terminalState, coherence, anomalies, nature,
+  terminalMode, terminalState, coherence, anomalies, nature, commandCount, altarRevealed,
 } from '../src/core/store.js';
 
 vi.mock('../src/core/clock.js',          () => ({ advance: vi.fn() }));
@@ -26,6 +26,7 @@ vi.mock('../src/audio/soundscape.js', () => ({
   speakBreachAnnouncement: vi.fn(),
   startVoiceCountdown:     vi.fn(),
 }));
+vi.mock('../src/terminal/entity.js', () => ({ openEntityChannel: vi.fn() }));
 
 import { advance }                           from '../src/core/clock.js';
 import { triggerDoctrinal }                  from '../src/feeds/doctrinal.js';
@@ -33,6 +34,7 @@ import { drawAspects, manifestAnomaly }      from '../src/core/anomaly.js';
 import { loadGhostSignals, loadLastCommand } from '../src/core/persistence.js';
 import { endShift as engineEndShift }        from '../src/scenarios/engine.js';
 import { checkEndgameConditions, resolveTerminalState } from '../src/endgame/terminalStates.js';
+import { openEntityChannel }                 from '../src/terminal/entity.js';
 
 import {
   startShift, runCascade, triggerBreach, startHaunting,
@@ -51,6 +53,8 @@ function resetStores() {
   coherence.set(100);
   anomalies.set({ aspects: [], manifestations: [] });
   nature.set({ system: 0, prophet: 0, antichrist: 0, martyr: 0 });
+  commandCount.set(0);
+  altarRevealed.set(false);
 }
 
 beforeEach(() => {
@@ -260,6 +264,40 @@ describe('runCascade(9) — guaranteed coherence collapse', () => {
   });
 });
 
+describe('runCascade(9) — entity reaction to refused mark', () => {
+  it('opens entity channel at 45s when altarRevealed and no terminal state', () => {
+    altarRevealed.set(true);
+    terminalState.set(null);
+    runCascade(9);
+    vi.advanceTimersByTime(45_001);
+    expect(openEntityChannel).toHaveBeenCalled();
+  });
+
+  it('does NOT open entity channel when altarRevealed is false', () => {
+    altarRevealed.set(false);
+    runCascade(9);
+    vi.advanceTimersByTime(45_001);
+    expect(openEntityChannel).not.toHaveBeenCalled();
+  });
+
+  it('does NOT open entity channel when a terminal state is already set', () => {
+    altarRevealed.set(true);
+    terminalState.set('THE_MARKED');
+    runCascade(9);
+    vi.advanceTimersByTime(45_001);
+    expect(openEntityChannel).not.toHaveBeenCalled();
+  });
+
+  it('entity channel lines reference other operators and the standing offer', () => {
+    altarRevealed.set(true);
+    runCascade(9);
+    vi.advanceTimersByTime(45_001);
+    const [lines] = openEntityChannel.mock.calls[0];
+    expect(lines).toContain('OTHERS WHO SAT WHERE YOU SIT.');
+    expect(lines).toContain('THE OFFER IS STILL OPEN.');
+  });
+});
+
 // ── Shift 10 CASCADE — no automatic timer ─────────────────────────────────
 
 describe('Shift 10 CASCADE — no automatic event timers', () => {
@@ -393,6 +431,37 @@ describe('Shift 10 breach — resolveTerminalState fires', () => {
     await startShift(10);
     vi.advanceTimersByTime(60_001);
     expect(resolveTerminalState).toHaveBeenCalled();
+  });
+});
+
+// ── inaction detection — GITA_LIMBS_FAIL ─────────────────────────────────
+
+describe('inaction detection — GITA_LIMBS_FAIL', () => {
+  it('fires GITA_LIMBS_FAIL when no commands typed during the shift', async () => {
+    commandCount.set(0);
+    await startShift(1);
+    triggerBreach(1);
+    expect(triggerDoctrinal).toHaveBeenCalledWith('GITA_LIMBS_FAIL');
+  });
+
+  it('does NOT fire GITA_LIMBS_FAIL when commands were typed during the shift', async () => {
+    commandCount.set(0);
+    await startShift(1);
+    commandCount.set(3);
+    triggerBreach(1);
+    expect(triggerDoctrinal).not.toHaveBeenCalledWith('GITA_LIMBS_FAIL');
+  });
+
+  it('fires only once — second shift of inaction does not trigger again', async () => {
+    commandCount.set(0);
+    await startShift(1);
+    triggerBreach(1); // first inaction — fires
+
+    await startShift(2); // captures commandCount still at 0
+    triggerBreach(2); // second inaction — _gitaLimbsFired guards it
+
+    const gitaCalls = triggerDoctrinal.mock.calls.filter(([k]) => k === 'GITA_LIMBS_FAIL');
+    expect(gitaCalls).toHaveLength(1);
   });
 });
 

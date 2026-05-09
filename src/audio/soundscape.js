@@ -383,6 +383,10 @@ export function setVoiceMode(mode) {
   _voiceMode = mode;
 }
 
+export function setMasterGain(db) {
+  Tone.getDestination().volume.value = db;
+}
+
 /**
  * Called when a new TACTICAL feed event arrives.
  * Doctrinal fragments injected into tactical: read content verbatim.
@@ -471,7 +475,7 @@ export function playHandshake() {
   const dest = _voiceChainHP; // route through radio filter chain
 
   // Phase 1: Carrier dial tone — 425Hz, 400ms
-  const dial = new Tone.Oscillator({ frequency: 425, type: 'sine', volume: -20 });
+  const dial = new Tone.Oscillator({ frequency: 425, type: 'sine', volume: -23 });
   dial.connect(dest);
   dial.start(now);
   dial.stop(now + 0.4);
@@ -485,7 +489,7 @@ export function playHandshake() {
   for (let i = 0; i < 14; i++) {
     const freq = i % 2 === 0 ? 2100 : 1300;
     const t    = fskStart + i * (pulseLen + pulseGap);
-    const osc  = new Tone.Oscillator({ frequency: freq, type: 'sine', volume: -12 });
+    const osc  = new Tone.Oscillator({ frequency: freq, type: 'sine', volume: -30 });
     osc.connect(dest);
     osc.start(t);
     osc.stop(t + pulseLen);
@@ -494,7 +498,7 @@ export function playHandshake() {
 
   // Phase 3: Data noise rush — the "connected" sound
   const noiseStart = fskStart + 14 * (pulseLen + pulseGap) + 0.06;
-  const noiseNode  = new Tone.Noise({ type: 'pink', volume: -20 });
+  const noiseNode  = new Tone.Noise({ type: 'pink', volume: -23 });
   noiseNode.connect(dest);
   noiseNode.start(noiseStart);
   noiseNode.stop(noiseStart + 0.55);
@@ -504,7 +508,7 @@ export function playHandshake() {
   const connStart = noiseStart + 0.65;
   [0, 0.18].forEach(offset => {
     const t    = connStart + offset;
-    const tone = new Tone.Oscillator({ frequency: 1004, type: 'sine', volume: -20 });
+    const tone = new Tone.Oscillator({ frequency: 1004, type: 'sine', volume: -23 });
     tone.connect(dest);
     tone.start(t);
     tone.stop(t + 0.12);
@@ -532,7 +536,7 @@ export function startConnectionSequence() {
     // After second handshake ends, sustain a quiet carrier until first command
     _connectionTimer = setTimeout(() => {
       if (!_connectionActive || !_voiceChainHP) return;
-      _sustainNode = new Tone.Noise({ type: 'pink', volume: -42 });
+      _sustainNode = new Tone.Noise({ type: 'pink', volume: -50 });
       _sustainNode.connect(_voiceChainHP);
       _sustainNode.start();
     }, 4500);
@@ -615,31 +619,28 @@ export function updateVoiceCoherence(coherenceValue) {
 
 /**
  * 8-bit square-wave sting — fires only on THE_MARKED ending.
- * Original descending minor phrase. Short, final, wrong.
+ * Pac-Man death: 20 descending chromatic steps, Bb4 → Eb3, ~65ms each.
+ * Short percussive envelope creates the wah-wah-wah stutter.
  */
 export function playMarkMelody() {
   if (!_ready) return;
 
   const synth = new Tone.Synth({
     oscillator: { type: 'square' },
-    envelope:   { attack: 0.005, decay: 0.12, sustain: 0.4, release: 0.3 },
-    volume:     -8,
+    envelope:   { attack: 0.002, decay: 0.05, sustain: 0.1, release: 0.04 },
+    volume:     -2,
   }).toDestination();
 
-  // Original minor descending phrase — E minor, 8-bit game-over feel
-  const phrase = [
-    { note: 'E5',  time: 0.0,  dur: '8n'  },
-    { note: 'D5',  time: 0.28, dur: '8n'  },
-    { note: 'C5',  time: 0.56, dur: '8n'  },
-    { note: 'B4',  time: 0.84, dur: '8n'  },
-    { note: 'G4',  time: 1.12, dur: '4n'  },
-    { note: 'A4',  time: 1.52, dur: '8n'  },
-    { note: 'E4',  time: 1.80, dur: '2n'  },
+  const death = [
+    'Bb4','A4','Ab4','G4','Gb4','F4','E4','Eb4',
+    'D4', 'Db4','C4','B3','Bb3','A3','Ab3','G3',
+    'Gb3','F3', 'E3','Eb3',
   ];
 
-  const now = Tone.now() + 0.3;
-  phrase.forEach(({ note, time, dur }) => synth.triggerAttackRelease(note, dur, now + time));
-  disposeAfter(synth, 4000);
+  const now  = Tone.now() + 0.05;
+  const step = 0.065;
+  death.forEach((note, i) => synth.triggerAttackRelease(note, '32n', now + i * step));
+  disposeAfter(synth, 2500);
 }
 
 /**

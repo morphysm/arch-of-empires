@@ -9,7 +9,7 @@ import { ignoreAnomaly } from '../core/anomaly.js';
 
 // Exported so tests and the command dispatcher can reference these without hardcoding
 export const AWARENESS_MAX = 100;
-export const TOTAL_SHIFTS  = 12;
+export const TOTAL_SHIFTS  = 11; // shifts 1–10; final 3 = 8, 9, 10 (Act 3)
 
 // Terminal lock — set by transcend(). No further commands of any tier accepted.
 let _locked = false;
@@ -30,7 +30,10 @@ function assertUnlocked() {
 
 function assertDoctrinalFired() {
   const shift = get(currentShift);
-  const fired = get(feeds).doctrinal.some(e => e.shift === shift);
+  const { diplomat, tactical, sigint, doctrinal } = get(feeds);
+  const fired = [...diplomat, ...tactical, ...sigint, ...doctrinal].some(
+    e => e.isDoctrinal && e.shift === shift
+  );
   if (!fired) throw new Error('PRAY_NOT_REVEALED: no DOCTRINAL event in current Shift');
 }
 

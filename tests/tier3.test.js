@@ -39,11 +39,12 @@ function seedDoctrinalEvent(shift = 0) {
     doctrinal: [{
       id: 'doc-seed-1',
       shift,
-      tradition: 'MORPHYSM',
-      fragmentKey: 'MORPHYSM_TULPAS',
-      content: 'Seed event.',
-      anomalyFlag: true,
-      timestamp: '11:54:00',
+      isDoctrinal:  true,
+      tradition:    'MORPHYSM',
+      fragmentKey:  'MORPHYSM_TULPAS',
+      content:      'Seed event.',
+      anomalyFlag:  true,
+      timestamp:    '11:54:00',
     }],
   }));
 }

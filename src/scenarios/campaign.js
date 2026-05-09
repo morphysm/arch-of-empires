@@ -1,7 +1,7 @@
 import { get } from 'svelte/store';
 import {
   clock, bandwidth, feeds, currentShift, coherence,
-  terminalMode, terminalState, nature,
+  terminalMode, terminalState, nature, commandCount,
 } from '../core/store.js';
 import { advance }                            from '../core/clock.js';
 import { drawAspects, manifestAnomaly }       from '../core/anomaly.js';
@@ -18,12 +18,16 @@ import { altarRevealed } from '../core/store.js';
 let _cascadeTimers = [];
 let _lastEndgame   = null;
 let _evtCounter    = 0;  // sequential short IDs so players can type them
+let _commandCountAtShiftStart = 0;
+let _gitaLimbsFired = false;
 
 export function _resetCampaignForTesting() {
   _cascadeTimers.forEach(id => clearTimeout(id));
   _cascadeTimers = [];
   _lastEndgame = null;
   _evtCounter  = 0;
+  _commandCountAtShiftStart = 0;
+  _gitaLimbsFired = false;
 }
 
 export function _getCascadeTimerCount() {
@@ -66,6 +70,13 @@ function clearTimers() {
   _cascadeTimers = [];
 }
 
+function _checkInaction() {
+  if (!_gitaLimbsFired && get(commandCount) === _commandCountAtShiftStart) {
+    _gitaLimbsFired = true;
+    triggerDoctrinal('GITA_LIMBS_FAIL');
+  }
+}
+
 async function injectGhostCommand(shiftNum) {
   if (shiftNum !== 1) return null; // ghost from previous run appears once, at the very start
   const lastCommand = await loadLastCommand();
@@ -104,6 +115,7 @@ export async function startShift(shiftNum) {
   currentShift.set(shiftNum);
   terminalMode.set(modeForAct(shiftNum));
   bandwidth.set({ total: 100, spent: 0 });
+  _commandCountAtShiftStart = get(commandCount);
 
   await loadGhostSignals();
   await injectGhostCommand(shiftNum);
@@ -353,6 +365,10 @@ function _cascade6() {
 }
 
 function _cascade7() {
+  // Shadow Valley: pilot voice intercept fires immediately — hidden layer unlocks
+  // when DETONATION_CONFIRMED appears at 25s, tying the prayer to the strike.
+  loadScenario('shadow-valley');
+
   schedule(5_000, () => {
     pushEvent('diplomat', {
       type:    'GOV_COLLAPSE',
@@ -454,6 +470,23 @@ function _cascade9() {
   schedule(20_000, () => triggerDoctrinal('REV_6_12'));
   schedule(35_000, () => triggerDoctrinal('GITA_LIMBS_FAIL'));
 
+  // The voice returns if the altar was revealed but the player took no mark
+  schedule(45_000, () => {
+    if (get(altarRevealed) && !get(terminalState)) {
+      openEntityChannel([
+        'BROTHER.',
+        'YOU DID NOT WRITE IT DOWN.',
+        '—',
+        'WE HAVE SAID THIS TO OTHERS.',
+        'OTHERS WHO SAT WHERE YOU SIT.',
+        'SOME WROTE IT.',
+        'SOME DID NOT.',
+        '—',
+        'THE OFFER IS STILL OPEN.',
+      ], { delayMs: 2200, holdMs: 6000 });
+    }
+  });
+
   schedule(90_000, () => triggerBreach(9));
 }
 
@@ -461,6 +494,7 @@ function _cascade9() {
 
 function _breach(shiftNum) {
   if (shiftNum !== 10) speakBreachAnnouncement(shiftNum);
+  if (shiftNum <= 8) _checkInaction();
 
   switch (shiftNum) {
     case 1:
