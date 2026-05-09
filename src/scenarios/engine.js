@@ -9,11 +9,13 @@ const _scenarios      = new Map(); // id → scenario
 const _pendingLayers  = [];        // { scenarioId, layerName, layer } — not yet unlocked
 const _unlockedForbidden = new Map(); // `${scenarioId}:forbidden` → { event, remembers }
 
-export function _resetEngineForTesting() {
+export function resetEngineState() {
   _scenarios.clear();
   _pendingLayers.length = 0;
   _unlockedForbidden.clear();
 }
+
+export const _resetEngineForTesting = resetEngineState;
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -105,5 +107,6 @@ export function endShift() {
       saveGhostSignal({ ...event, origin: 'UNRESOLVED_FORBIDDEN' });
     }
   });
+  _pendingLayers.length = 0;
   _unlockedForbidden.clear();
 }

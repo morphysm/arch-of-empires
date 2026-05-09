@@ -3,6 +3,8 @@ import { bandwidth, awareness, coherence, feeds, clock, anomalies } from '../cor
 import { advance } from '../core/clock.js';
 import { saveClock } from '../core/persistence.js';
 import { triggerDoctrinal } from '../feeds/doctrinal.js';
+import { registerOperatorError } from '../core/operatorError.js';
+import { isTerminalLocked } from './tier3.js';
 
 const COSTS = {
   DECODE:      1,
@@ -21,6 +23,27 @@ function spendBandwidth(cost) {
 
 function fail(command, target) {
   return { command, target: String(target), success: false, reason: 'BANDWIDTH_EXCEEDED' };
+}
+
+function assertUnlocked() {
+  if (isTerminalLocked()) throw new Error('TERMINAL_LOCKED: terminal is read-only after TRANSCEND');
+}
+
+function operatorError(command, target, cost, reason = 'TARGET_UNRESOLVED') {
+  const penalty = registerOperatorError();
+  return {
+    command,
+    target: String(target),
+    success: false,
+    bandwidthCost: cost,
+    clockEffect: penalty.clockPenalty ? 180 : 0,
+    doctrinalTriggered: null,
+    timestamp: get(clock).time,
+    reason,
+    anomalyFlag: true,
+    operatorError: true,
+    ...penalty,
+  };
 }
 
 function findEvent(id) {
@@ -46,11 +69,13 @@ function markVerified(eventId, extra = {}) {
 // ── Tier 2 commands ───────────────────────────────────────────────────────────
 
 export function decode(signalId) {
+  assertUnlocked();
   const cost = COSTS.DECODE;
   if (!hasBandwidth(cost)) return fail('DECODE', signalId);
   spendBandwidth(cost);
 
   const event = findEvent(signalId);
+  if (!event) return operatorError('DECODE', signalId, cost);
   const aspects = get(anomalies).aspects;
 
   // Probability calculation (auditable):
@@ -96,11 +121,13 @@ export function decode(signalId) {
 }
 
 export function verify(sourceId) {
+  assertUnlocked();
   const cost = COSTS.VERIFY;
   if (!hasBandwidth(cost)) return fail('VERIFY', sourceId);
   spendBandwidth(cost);
 
   const event = findEvent(sourceId);
+  if (!event) return operatorError('VERIFY', sourceId, cost);
   const isGhost = event?.isGhost ?? false;
   const aspects = get(anomalies).aspects;
 
@@ -162,9 +189,13 @@ export function verify(sourceId) {
 }
 
 export function triangulate(targetId) {
+  assertUnlocked();
   const cost = COSTS.TRIANGULATE;
   if (!hasBandwidth(cost)) return fail('TRIANGULATE', targetId);
   spendBandwidth(cost);
+
+  const event = findEvent(targetId);
+  if (!event) return operatorError('TRIANGULATE', targetId, cost);
 
   advance(20, 'TRIANGULATE');
 
@@ -182,7 +213,6 @@ export function triangulate(targetId) {
   let phantomRisk = false;
 
   if (succeeded) {
-    const event = findEvent(targetId);
     location = event?.origin ?? 'UNKNOWN';
     confidence = 70 + Math.floor(Math.random() * 31); // 70–100
   } else {

@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { get } from 'svelte/store';
-import { bandwidth, awareness, coherence, feeds, clock, anomalies } from '../src/core/store.js';
+import { bandwidth, awareness, coherence, feeds, clock, anomalies, currentShift } from '../src/core/store.js';
 
 vi.mock('../src/core/clock.js',       () => ({ advance: vi.fn() }));
 vi.mock('../src/feeds/doctrinal.js',  () => ({ triggerDoctrinal: vi.fn() }));
@@ -16,6 +16,8 @@ import { advance }          from '../src/core/clock.js';
 import { triggerDoctrinal } from '../src/feeds/doctrinal.js';
 import { saveClock }        from '../src/core/persistence.js';
 import { decode, verify, triangulate } from '../src/commands/tier2.js';
+import { transcend, AWARENESS_MAX, TOTAL_SHIFTS, _resetLockForTesting } from '../src/commands/tier3.js';
+import { resetOperatorErrors } from '../src/core/operatorError.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -43,12 +45,23 @@ function forceRoll(value) {
 }
 
 beforeEach(() => {
-  feeds.set({ diplomat: [], tactical: [], sigint: [], doctrinal: [] });
+  feeds.set({
+    diplomat: [],
+    tactical: [
+      { id: 't', timestamp: '11:54:00', type: 'CONTACT_UNIDENTIFIED', origin: 'North Atlantic', content: 'Contact.', anomalyFlag: false, verified: false, shift: 0 },
+      { id: 'target-1', timestamp: '11:54:00', type: 'CONTACT_UNIDENTIFIED', origin: 'North Atlantic', content: 'Contact.', anomalyFlag: false, verified: false, shift: 0 },
+    ],
+    sigint: [makeSigintEvent()],
+    doctrinal: [],
+  });
   clock.set({ time: '11:54:00', debtLedger: [] });
   bandwidth.set({ total: 100, spent: 0 });
   awareness.set(0);
   coherence.set(100);
   anomalies.set({ aspects: [], manifestations: [] });
+  currentShift.set(0);
+  resetOperatorErrors();
+  _resetLockForTesting();
   vi.clearAllMocks();
 });
 
@@ -466,5 +479,14 @@ describe('bandwidth enforcement', () => {
     bandwidth.set({ total: 100, spent: 100 });
     decode('ev-1');
     expect(saveClock).not.toHaveBeenCalled();
+  });
+});
+
+describe('terminal lock', () => {
+  it('blocks tier 2 commands after TRANSCEND locks the terminal', () => {
+    currentShift.set(TOTAL_SHIFTS - 1);
+    awareness.set(AWARENESS_MAX);
+    transcend();
+    expect(() => verify('ev-1')).toThrow('TERMINAL_LOCKED');
   });
 });

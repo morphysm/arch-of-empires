@@ -24,6 +24,7 @@ vi.mock('../src/endgame/terminalStates.js', () => ({
 }));
 vi.mock('../src/audio/soundscape.js', () => ({
   speakBreachAnnouncement: vi.fn(),
+  speakPsalm234:           vi.fn(),
   startVoiceCountdown:     vi.fn(),
 }));
 vi.mock('../src/terminal/entity.js', () => ({ openEntityChannel: vi.fn() }));
@@ -34,6 +35,7 @@ import { drawAspects, manifestAnomaly }      from '../src/core/anomaly.js';
 import { loadGhostSignals, loadLastCommand } from '../src/core/persistence.js';
 import { endShift as engineEndShift }        from '../src/scenarios/engine.js';
 import { checkEndgameConditions, resolveTerminalState } from '../src/endgame/terminalStates.js';
+import { speakPsalm234 }                     from '../src/audio/soundscape.js';
 import { openEntityChannel }                 from '../src/terminal/entity.js';
 
 import {
@@ -232,6 +234,27 @@ describe('runCascade(1) — Shift 1 event order', () => {
   });
 });
 
+describe('runCascade(1) — unanswered event clock pressure', () => {
+  it('advances the clock by 2 minutes after 3 events with no player interaction', () => {
+    runCascade(1);
+    vi.advanceTimersByTime(30_001);
+    expect(advance).toHaveBeenCalledWith(120, 'PLAYER_INACTION');
+  });
+
+  it('resets the unanswered event count when the player enters a command', () => {
+    runCascade(1);
+    vi.advanceTimersByTime(15_001);
+    commandCount.set(1);
+    vi.advanceTimersByTime(15_000);
+    expect(advance).not.toHaveBeenCalledWith(120, 'PLAYER_INACTION');
+  });
+
+  it('does not count shift briefing events as ignored player events', async () => {
+    await startShift(1);
+    expect(advance).not.toHaveBeenCalledWith(120, 'PLAYER_INACTION');
+  });
+});
+
 describe('runCascade(4) — Shift 4 doctrinal triggers', () => {
   it('fires GITA_SOUL_NEVER_DIES with dead agent event at 5s', () => {
     runCascade(4);
@@ -382,6 +405,14 @@ describe('triggerBreach(7) — coherence and doctrinal', () => {
   it('fires MORPHYSM_COMBATANTS_ANOMALIES', () => {
     triggerBreach(7);
     expect(triggerDoctrinal).toHaveBeenCalledWith('MORPHYSM_COMBATANTS_ANOMALIES');
+  });
+});
+
+describe('runCascade(7) — Shadow Valley voice', () => {
+  it('preaches Psalm 23:4 after the Shadow Valley intercept opens', () => {
+    runCascade(7);
+    vi.advanceTimersByTime(3_001);
+    expect(speakPsalm234).toHaveBeenCalledOnce();
   });
 });
 

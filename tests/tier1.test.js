@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { get } from 'svelte/store';
-import { bandwidth, nature, feeds, clock } from '../src/core/store.js';
+import { bandwidth, nature, feeds, clock, currentShift, awareness } from '../src/core/store.js';
 
 vi.mock('../src/core/clock.js', () => ({ advance: vi.fn() }));
 vi.mock('../src/feeds/doctrinal.js', () => ({ triggerDoctrinal: vi.fn() }));
@@ -8,6 +8,8 @@ vi.mock('../src/feeds/doctrinal.js', () => ({ triggerDoctrinal: vi.fn() }));
 import { advance } from '../src/core/clock.js';
 import { triggerDoctrinal } from '../src/feeds/doctrinal.js';
 import { intercept, auth, silence, leak } from '../src/commands/tier1.js';
+import { transcend, AWARENESS_MAX, TOTAL_SHIFTS, _resetLockForTesting } from '../src/commands/tier3.js';
+import { resetOperatorErrors } from '../src/core/operatorError.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -42,10 +44,30 @@ function makeTacticalEvent(overrides = {}) {
 }
 
 beforeEach(() => {
-  feeds.set({ diplomat: [], tactical: [], sigint: [], doctrinal: [] });
+  feeds.set({
+    diplomat: [
+      { id: 'target', timestamp: '11:54:00', type: 'CEASEFIRE_STATUS', content: 'Treaty target.', anomalyFlag: false, verified: false, shift: 0 },
+    ],
+    tactical: [
+      makeTacticalEvent({ id: 'target' }),
+      makeTacticalEvent({ id: 'non-brahmastra-target' }),
+      makeTacticalEvent({ id: 'a' }),
+      makeTacticalEvent({ id: 'b' }),
+    ],
+    sigint: [
+      makeSigintEvent({ id: 'my-target' }),
+      makeSigintEvent({ id: 'PACKAGE' }),
+      makeSigintEvent({ id: 'INTEL_PACKAGE' }),
+    ],
+    doctrinal: [],
+  });
   clock.set({ time: '11:54:00', debtLedger: [] });
   bandwidth.set({ total: 100, spent: 0 });
   nature.set({ system: 0, prophet: 0, antichrist: 0, martyr: 0 });
+  currentShift.set(0);
+  awareness.set(0);
+  resetOperatorErrors();
+  _resetLockForTesting();
   vi.clearAllMocks();
 });
 
@@ -84,8 +106,13 @@ describe('intercept()', () => {
     expect(intercept('tactical-ev').event).toEqual(ev);
   });
 
-  it('returns event: null for an unknown id', () => {
-    expect(intercept('nonexistent').event).toBeNull();
+  it('returns operator error for an unknown id', () => {
+    expect(intercept('nonexistent')).toMatchObject({
+      success: false,
+      reason: 'TARGET_UNRESOLVED',
+      anomalyFlag: true,
+      operatorError: true,
+    });
   });
 
   it('does not trigger a doctrinal fragment', () => {
@@ -317,6 +344,34 @@ describe('bandwidth enforcement', () => {
     const r = auth('TREATY', 'target'); // cost 5, 96+5=101 > 100
     expect(r.success).toBe(false);
     expect(r.reason).toBe('BANDWIDTH_EXCEEDED');
+  });
+});
+
+describe('operator errors', () => {
+  it('flags invalid targets as anomalous operator errors with side effects', () => {
+    const r = intercept('missing-target');
+    expect(r).toMatchObject({
+      success: false,
+      reason: 'TARGET_UNRESOLVED',
+      anomalyFlag: true,
+      operatorError: true,
+      bandwidthCost: 2,
+    });
+    expect(get(bandwidth).spent).toBe(2);
+  });
+
+  it('advances the clock by 3 minutes on the 5th operator error in the same shift', () => {
+    for (let i = 0; i < 5; i++) intercept(`missing-${i}`);
+    expect(advance).toHaveBeenCalledWith(180, 'OPERATOR_ERROR');
+  });
+});
+
+describe('terminal lock', () => {
+  it('blocks tier 1 commands after TRANSCEND locks the terminal', () => {
+    currentShift.set(TOTAL_SHIFTS - 1);
+    awareness.set(AWARENESS_MAX);
+    transcend();
+    expect(() => intercept('my-target')).toThrow('TERMINAL_LOCKED');
   });
 });
 

@@ -307,6 +307,25 @@ describe('endShift() — unresolved forbidden layers', () => {
     endShift(); // second call should not re-save
     expect(saveGhostSignal).not.toHaveBeenCalled();
   });
+
+  it('expires hidden layers that were still pending at shift end', async () => {
+    await loadScenario('mock', makeMockScenario());
+    endShift();
+
+    checkUnlocks(makeState({ awareness: 10 }));
+
+    expect(get(feeds).sigint).toHaveLength(0);
+  });
+
+  it('expires forbidden layers that were still pending at shift end', async () => {
+    await loadScenario('mock', makeMockScenario());
+    endShift();
+
+    checkUnlocks(makeState({ coherence: 40 }));
+
+    expect(triggerDoctrinal).not.toHaveBeenCalledWith('GITA_SOUL_NEVER_DIES');
+    expect(saveGhostSignal).not.toHaveBeenCalled();
+  });
 });
 
 // ── Ghost Submarine scenario ──────────────────────────────────────────────────

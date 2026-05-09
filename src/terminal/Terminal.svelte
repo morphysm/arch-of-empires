@@ -17,7 +17,8 @@
     setVoiceMode, speakTacticalEvent, updateVoiceCoherence, speakTerminalStateResolution,
     startConnectionSequence, resetVoiceForNewRun, playMarkMelody,
   } from '../audio/soundscape.js';
-  import { startShift } from '../scenarios/campaign.js';
+  import { startShift, resetCampaignState } from '../scenarios/campaign.js';
+  import { resetEngineState } from '../scenarios/engine.js';
 
   // ── Per-mode corruption config ─────────────────────────────────
   const CORRUPTION_CONFIG = {
@@ -146,6 +147,8 @@
   let pauseEl;
 
   function newRun() {
+    resetCampaignState();
+    resetEngineState();
     clock.update(c => ({ ...c, time: '11:54:00', debtLedger: [] }));
     feeds.set({ diplomat: [], tactical: [], sigint: [], doctrinal: [] });
     awareness.set(0);

@@ -8,6 +8,7 @@
   import { checkUnlocks } from '../scenarios/engine.js';
   import { saveLastCommand } from '../core/persistence.js';
   import { signalFirstInteraction } from '../audio/soundscape.js';
+  import { registerOperatorError } from '../core/operatorError.js';
 
   let inputValue  = '';
   let history     = [];   // most-recent first, max 50
@@ -45,8 +46,22 @@
     }
 
     const content    = result.command + ': ' + (result.success ? 'OK' : (result.reason || 'FAILED'));
-    const anomalyFlag = result.doctrinalTriggered != null;
+    const anomalyFlag = result.anomalyFlag === true || result.doctrinalTriggered != null;
     appendSigint('SYSTEM', content, anomalyFlag);
+  }
+
+  function appendOperatorError(command, target, reason) {
+    const penalty = registerOperatorError();
+    appendResult({
+      command,
+      target,
+      success: false,
+      reason,
+      anomalyFlag: true,
+      doctrinalTriggered: null,
+      operatorError: true,
+      ...penalty,
+    });
   }
 
   // ── Tab completion ────────────────────────────────────────────
@@ -101,7 +116,7 @@
           case '666':                result = mark();                 break;
           case 'REFUSE':             result = refuse();               break;
           default:
-            appendSigint('SYSTEM', `COMMAND NOT RECOGNIZED: ${raw}`, false);
+            appendOperatorError(cmd, raw, 'COMMAND_NOT_RECOGNIZED');
             return;
         }
       } catch (_) {

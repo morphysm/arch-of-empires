@@ -269,6 +269,9 @@ const DOCTRINAL_TACTICAL_VOICE = {
   REV_22_13:'Alpha. Omega. First. Last. Beginning. End. Confirmed.',
 };
 
+const PSALM_23_4 =
+  'Yea, though I walk through the valley of the shadow of death, I will fear no evil. For thou art with me. Thy rod and thy staff, they comfort me.';
+
 // ── Internal voice helpers ─────────────────────────────────────────────────
 
 function _initVoiceChain() {
@@ -414,6 +417,11 @@ export function speakBreachAnnouncement(shiftNum) {
   if (!_ready || !_voiceActive) return;
   const text = BREACH_VOICE[shiftNum];
   if (text) _speak(text);
+}
+
+export function speakPsalm234() {
+  if (!_ready || !_voiceActive) return;
+  _speak(PSALM_23_4, { rate: 0.66, pitch: 0.78, click: true });
 }
 
 /**

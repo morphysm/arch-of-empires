@@ -9,9 +9,10 @@ import { triggerDoctrinal, resetShiftTracking } from '../feeds/doctrinal.js';
 import { loadGhostSignals, loadLastCommand }  from '../core/persistence.js';
 import { loadScenario, endShift as engineEndShift } from '../scenarios/engine.js';
 import { checkEndgameConditions, resolveTerminalState } from '../endgame/terminalStates.js';
-import { speakBreachAnnouncement, startVoiceCountdown } from '../audio/soundscape.js';
+import { speakBreachAnnouncement, speakPsalm234, startVoiceCountdown } from '../audio/soundscape.js';
 import { openEntityChannel } from '../terminal/entity.js';
 import { altarRevealed } from '../core/store.js';
+import { resetOperatorErrors } from '../core/operatorError.js';
 
 // ── Module state ───────────────────────────────────────────────────────────
 
@@ -19,16 +20,23 @@ let _cascadeTimers = [];
 let _lastEndgame   = null;
 let _evtCounter    = 0;  // sequential short IDs so players can type them
 let _commandCountAtShiftStart = 0;
+let _commandCountAtLastEvent = 0;
+let _unansweredEventCount = 0;
 let _gitaLimbsFired = false;
 
-export function _resetCampaignForTesting() {
+export function resetCampaignState() {
   _cascadeTimers.forEach(id => clearTimeout(id));
   _cascadeTimers = [];
   _lastEndgame = null;
   _evtCounter  = 0;
   _commandCountAtShiftStart = 0;
+  _commandCountAtLastEvent = 0;
+  _unansweredEventCount = 0;
   _gitaLimbsFired = false;
+  resetOperatorErrors();
 }
+
+export const _resetCampaignForTesting = resetCampaignState;
 
 export function _getCascadeTimerCount() {
   return _cascadeTimers.length;
@@ -57,6 +65,25 @@ function pushEvent(feedName, partial) {
       },
     ],
   }));
+
+  trackUnansweredEvent(rest.type);
+}
+
+function trackUnansweredEvent(eventType) {
+  if (eventType === 'BRIEFING' || eventType === 'SYSTEM') return;
+
+  const currentCommandCount = get(commandCount);
+  if (currentCommandCount !== _commandCountAtLastEvent) {
+    _commandCountAtLastEvent = currentCommandCount;
+    _unansweredEventCount = 0;
+  }
+
+  _unansweredEventCount += 1;
+
+  if (_unansweredEventCount >= 3) {
+    _unansweredEventCount = 0;
+    advance(120, 'PLAYER_INACTION');
+  }
 }
 
 function schedule(delayMs, fn) {
@@ -116,6 +143,8 @@ export async function startShift(shiftNum) {
   terminalMode.set(modeForAct(shiftNum));
   bandwidth.set({ total: 100, spent: 0 });
   _commandCountAtShiftStart = get(commandCount);
+  _commandCountAtLastEvent = get(commandCount);
+  _unansweredEventCount = 0;
 
   await loadGhostSignals();
   await injectGhostCommand(shiftNum);
@@ -368,6 +397,7 @@ function _cascade7() {
   // Shadow Valley: pilot voice intercept fires immediately — hidden layer unlocks
   // when DETONATION_CONFIRMED appears at 25s, tying the prayer to the strike.
   loadScenario('shadow-valley');
+  schedule(3_000, () => speakPsalm234());
 
   schedule(5_000, () => {
     pushEvent('diplomat', {
