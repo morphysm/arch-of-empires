@@ -1,10 +1,11 @@
 <script>
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
-  import { feeds, clock, currentShift, commandCount } from '../core/store.js';
+  import { feeds, clock, currentShift, commandCount, awareness, coherence, anomalies, nature } from '../core/store.js';
   import { intercept, auth, silence, leak } from '../commands/tier1.js';
   import { verify, decode, triangulate }     from '../commands/tier2.js';
-  import { pray, obey, transcend, rewriteOrigin, mark, refuse } from '../commands/tier3.js';
+  import { pray, obey, transcend, rewriteOrigin, obliterateMemoir, mark, refuse } from '../commands/tier3.js';
+  import { checkUnlocks } from '../scenarios/engine.js';
   import { saveLastCommand } from '../core/persistence.js';
   import { signalFirstInteraction } from '../audio/soundscape.js';
 
@@ -92,12 +93,13 @@
           case 'VERIFY':         result = verify(args[0]);            break;
           case 'DECODE':         result = decode(args[0]);            break;
           case 'TRIANGULATE':    result = triangulate(args[0]);       break;
-          case 'PRAY':           result = pray();                     break;
-          case 'OBEY':           result = obey();                     break;
-          case 'TRANSCEND':      result = transcend();                break;
-          case 'REWRITE_ORIGIN': result = rewriteOrigin();            break;
-          case '666':            result = mark();                    break;
-          case 'REFUSE':         result = refuse();                  break;
+          case 'PRAY':               result = pray();                 break;
+          case 'OBEY':               result = obey();                 break;
+          case 'TRANSCEND':          result = transcend();            break;
+          case 'REWRITE_ORIGIN':     result = rewriteOrigin();        break;
+          case 'OBLITERATE_MEMOIR':  result = obliterateMemoir();     break;
+          case '666':                result = mark();                 break;
+          case 'REFUSE':             result = refuse();               break;
           default:
             appendSigint('SYSTEM', `COMMAND NOT RECOGNIZED: ${raw}`, false);
             return;
@@ -113,6 +115,15 @@
         saveLastCommand(rawInput);
         signalFirstInteraction();
       }
+
+      checkUnlocks({
+        feeds:     get(feeds),
+        clock:     get(clock),
+        awareness: get(awareness),
+        coherence: get(coherence),
+        anomalies: get(anomalies),
+        nature:    get(nature),
+      });
 
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
