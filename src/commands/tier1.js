@@ -141,8 +141,7 @@ export function auth(type, target) {
     finalTarget = diplomatEvent.id;
   }
 
-  const endgameTriggered = checkEndgameConditions();
-return result('AUTH', finalTarget, cost, 0, doctrinalTriggered, { type: resolved.type, ...(endgameTriggered ? { terminalStateCandidateSet: endgameTriggered } : {}) });
+return result('AUTH', finalTarget, cost, 0, doctrinalTriggered, { type: resolved.type });
 }
 
 export function silence(target) {
@@ -160,9 +159,7 @@ export function silence(target) {
     // Zen of Zero — silencing yourself costs nothing in time
   }
 
-  const endgameTriggered = checkEndgameConditions();
-  return result('SILENCE', target, cost, 0, doctrinalTriggered, endgameTriggered ? { terminalStateCandidateSet: endgameTriggered } : {});
-}
+return result('SILENCE', target, cost, 0, doctrinalTriggered); }
 
 export function leak(target, faction) {
   assertUnlocked();
