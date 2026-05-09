@@ -46,7 +46,7 @@
     }
 
     const content    = result.command + ': ' + (result.success ? 'OK' : (result.reason || 'FAILED'));
-    const anomalyFlag = result.anomalyFlag === true || result.doctrinalTriggered != null;
+    const anomalyFlag = result.anomalyFlag === true || result.success === false;
     appendSigint('SYSTEM', content, anomalyFlag);
   }
 

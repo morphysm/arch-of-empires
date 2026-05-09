@@ -142,7 +142,7 @@ export function auth(type, target) {
   }
 
   const endgameTriggered = checkEndgameConditions();
-  return result('AUTH', finalTarget, cost, 0, doctrinalTriggered, { type: resolved.type, ...(endgameTriggered ? { terminalStateCandidateSet: endgameTriggered } : {}) });
+return result('AUTH', finalTarget, cost, 0, doctrinalTriggered, { type: resolved.type, ...(endgameTriggered ? { terminalStateCandidateSet: endgameTriggered } : {}) });
 }
 
 export function silence(target) {
