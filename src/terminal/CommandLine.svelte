@@ -102,7 +102,7 @@
       try {
         switch (cmd) {
           case 'INTERCEPT':      result = intercept(args[0]);         break;
-          case 'AUTH':           result = auth(args[0], args[1]);     break;
+          case 'AUTH':           result = auth(args[0], args.slice(1).join(' ')); break;
           case 'SILENCE':        result = silence(args[0]);           break;
           case 'LEAK':           result = leak(args[0], args[1]);     break;
           case 'VERIFY':         result = verify(args[0]);            break;

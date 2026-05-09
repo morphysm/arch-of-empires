@@ -4,6 +4,7 @@ import { advance } from '../core/clock.js';
 import { saveClock } from '../core/persistence.js';
 import { triggerDoctrinal } from '../feeds/doctrinal.js';
 import { registerOperatorError } from '../core/operatorError.js';
+import { canonicalEventId } from '../core/eventIds.js';
 import { isTerminalLocked } from './tier3.js';
 
 const COSTS = {
@@ -48,7 +49,8 @@ function operatorError(command, target, cost, reason = 'TARGET_UNRESOLVED') {
 
 function findEvent(id) {
   const { diplomat, tactical, sigint } = get(feeds);
-  return [...diplomat, ...tactical, ...sigint].find(e => e.id === id) ?? null;
+  const canonical = canonicalEventId(id);
+  return [...diplomat, ...tactical, ...sigint].find(e => canonicalEventId(e.id) === canonical) ?? null;
 }
 
 // Observer Effect: mark the event as verified in the store, with optional extra fields.

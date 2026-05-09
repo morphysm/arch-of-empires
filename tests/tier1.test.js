@@ -53,6 +53,7 @@ beforeEach(() => {
       makeTacticalEvent({ id: 'non-brahmastra-target' }),
       makeTacticalEvent({ id: 'a' }),
       makeTacticalEvent({ id: 'b' }),
+      makeTacticalEvent({ id: 'evt-003' }),
     ],
     sigint: [
       makeSigintEvent({ id: 'my-target' }),
@@ -179,6 +180,26 @@ describe('auth() — STRIKE', () => {
     auth('STRIKE', 'target');
     expect(get(bandwidth).spent).toBe(10);
   });
+
+  it('accepts a split and unpadded event id with explicit STRIKE type', () => {
+    const r = auth('STRIKE', 'EVT -3');
+    expect(r).toMatchObject({
+      success: true,
+      type: 'STRIKE',
+      target: 'evt-003',
+      doctrinalTriggered: 'GITA_DUTY_WITHOUT_ATTACHMENT',
+    });
+  });
+
+  it('infers STRIKE from a tactical event id when AUTH receives only the event code', () => {
+    const r = auth('EVT', '-3');
+    expect(r).toMatchObject({
+      success: true,
+      type: 'STRIKE',
+      target: 'evt-003',
+      doctrinalTriggered: 'GITA_DUTY_WITHOUT_ATTACHMENT',
+    });
+  });
 });
 
 describe('auth() — TREATY', () => {
@@ -203,6 +224,36 @@ describe('auth() — TREATY', () => {
 
   it('result includes type field set to TREATY', () => {
     expect(auth('TREATY', 'target').type).toBe('TREATY');
+  });
+
+  it('infers TREATY from a diplomatic event id when AUTH receives only the event code', () => {
+    feeds.update(s => ({
+      ...s,
+      diplomat: [
+        ...s.diplomat,
+        { id: 'evt-004', timestamp: '11:54:00', type: 'CEASEFIRE_STATUS', content: 'Treaty event.', anomalyFlag: false, verified: false, shift: 0 },
+      ],
+    }));
+
+    const r = auth('EVT', '-4');
+    expect(r).toMatchObject({
+      success: true,
+      type: 'TREATY',
+      target: 'evt-004',
+      doctrinalTriggered: null,
+    });
+  });
+});
+
+describe('auth() — malformed input', () => {
+  it('punishes illogical auth types as operator errors', () => {
+    const r = auth('BANANA', undefined);
+    expect(r).toMatchObject({
+      success: false,
+      reason: 'INVALID_AUTH_TYPE',
+      anomalyFlag: true,
+      operatorError: true,
+    });
   });
 });
 
