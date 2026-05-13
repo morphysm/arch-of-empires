@@ -43,6 +43,8 @@ export const entityLines = writable([]);
 
 export const altarRevealed = writable(false);
 
+export const gamePaused = writable(false);
+
 export const currentShift = writable(0);
 
 export const coherence = writable(100);

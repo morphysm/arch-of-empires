@@ -23,9 +23,10 @@ let _commandCountAtShiftStart = 0;
 let _commandCountAtLastEvent = 0;
 let _unansweredEventCount = 0;
 let _gitaLimbsFired = false;
+let _timersPaused  = false;
 
 export function resetCampaignState() {
-  _cascadeTimers.forEach(id => clearTimeout(id));
+  _cascadeTimers.forEach(t => clearTimeout(t.id));
   _cascadeTimers = [];
   _lastEndgame = null;
   _evtCounter  = 0;
@@ -33,6 +34,7 @@ export function resetCampaignState() {
   _commandCountAtLastEvent = 0;
   _unansweredEventCount = 0;
   _gitaLimbsFired = false;
+  _timersPaused   = false;
   resetOperatorErrors();
 }
 
@@ -87,14 +89,40 @@ function trackUnansweredEvent(eventType) {
 }
 
 function schedule(delayMs, fn) {
-  const id = setTimeout(fn, delayMs);
-  _cascadeTimers.push(id);
-  return id;
+  const entry = { fn, remainingMs: delayMs, startedAt: Date.now() };
+  entry.id = setTimeout(() => {
+    _cascadeTimers = _cascadeTimers.filter(t => t !== entry);
+    fn();
+  }, delayMs);
+  _cascadeTimers.push(entry);
 }
 
 function clearTimers() {
-  _cascadeTimers.forEach(id => clearTimeout(id));
+  _cascadeTimers.forEach(t => clearTimeout(t.id));
   _cascadeTimers = [];
+}
+
+export function pauseTimers() {
+  if (_timersPaused) return;
+  _timersPaused = true;
+  const now = Date.now();
+  _cascadeTimers.forEach(t => {
+    clearTimeout(t.id);
+    t.remainingMs = Math.max(0, t.remainingMs - (now - t.startedAt));
+  });
+}
+
+export function resumeTimers() {
+  if (!_timersPaused) return;
+  _timersPaused = false;
+  _cascadeTimers.forEach(t => {
+    const entry = t;
+    entry.startedAt = Date.now();
+    entry.id = setTimeout(() => {
+      _cascadeTimers = _cascadeTimers.filter(x => x !== entry);
+      entry.fn();
+    }, entry.remainingMs);
+  });
 }
 
 function _checkInaction() {

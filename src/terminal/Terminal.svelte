@@ -17,7 +17,8 @@
     setVoiceMode, speakTacticalEvent, speakDoctrinal, updateVoiceCoherence, speakTerminalStateResolution,
     startConnectionSequence, resetVoiceForNewRun, playMarkMelody,
   } from '../audio/soundscape.js';
-  import { startShift, resetCampaignState } from '../scenarios/campaign.js';
+  import { startShift, resetCampaignState, pauseTimers, resumeTimers } from '../scenarios/campaign.js';
+  import { gamePaused } from '../core/store.js';
   import { resetEngineState } from '../scenarios/engine.js';
   import { loadCurrentShift } from '../core/persistence.js';
 
@@ -148,6 +149,7 @@
   let pauseEl;
 
   function newRun() {
+    gamePaused.set(false);
     resetCampaignState();
     resetEngineState();
     clock.update(c => ({ ...c, time: '11:54:00', debtLedger: [] }));
@@ -171,6 +173,7 @@
   }
 
   async function resumeFromLastShift() {
+    gamePaused.set(false);
     resetCampaignState();
     resetEngineState();
     clock.update(c => ({ ...c, time: '11:54:00', debtLedger: [] }));
@@ -194,13 +197,24 @@
     startShift(savedShift ?? 1);
   }
 
+  function openMenu() {
+    menuOpen = true;
+    pauseTimers();
+    tick().then(() => pauseEl?.focus());
+  }
+
+  function closeMenu() {
+    menuOpen = false;
+    resumeTimers();
+  }
+
   function handleMenuKeydown(e) {
     e.stopPropagation(); // keep menu keys out of the global handler
     if (e.key === 'Escape' || e.key === 'r' || e.key === 'R') {
       if ((e.key === 'r' || e.key === 'R') && get(terminalState)) {
         resumeFromLastShift();
       } else {
-        menuOpen = false;
+        closeMenu();
       }
     }
     else if (e.key === 'n' || e.key === 'N') { newRun(); }
@@ -212,8 +226,7 @@
 
   function handleGlobalKeydown(e) {
     if (e.key === 'Escape' && !menuOpen) {
-      menuOpen = true;
-      tick().then(() => pauseEl?.focus());
+      openMenu();
     }
   }
 
@@ -221,7 +234,17 @@
   let _prevManifestations = 0;
   let unsubAnomalies;
 
+  function _resumeOnAnyKey(e) {
+    if (!get(gamePaused)) return;
+    if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    gamePaused.set(false);
+    resumeTimers();
+  }
+
   onMount(async () => {
+    window.addEventListener('keydown', _resumeOnAnyKey, true);
     const savedShift = await loadCurrentShift();
     startShift(savedShift ?? 1);
 
@@ -256,6 +279,7 @@
   });
 
   onDestroy(() => {
+    window.removeEventListener('keydown', _resumeOnAnyKey, true);
     clearTimers();
     unsubCoherence?.();
     unsubMode?.();
@@ -371,6 +395,7 @@
     <span class="header-left">
       ARCH OF EMPIRES // SHIFT {$currentShift} //
       <span class:alert={$clock.time > '11:58:00'}>{$clock.time}</span>
+      {#if $gamePaused}<span class="header-paused">// PAUSED</span>{/if}
     </span>
     <span class="header-right">
       <span class:corrupt={$coherence < corruptThreshold}>{coherenceDisplay}</span>
@@ -460,6 +485,9 @@
         <div class="pause-item">[N] NEW RUN</div>
         <div class="pause-item">[Q] QUIT TO DESKTOP</div>
         <div class="pause-rule">───────────────────────────</div>
+        <div class="pause-note">Type PAUSE to suspend the terminal.</div>
+        <div class="pause-note">Press any key to resume.</div>
+        <div class="pause-rule">───────────────────────────</div>
         <div class="pause-note">The terminal does not save your choices.</div>
         <div class="pause-note">It only saves your debts.</div>
       </div>
@@ -518,6 +546,12 @@
 
   /* Clock alert — no animation, just color */
   .alert  { color: var(--color-alert); }
+
+  .header-paused {
+    animation: paused-blink 1s step-end infinite;
+    color: var(--color-text-dim);
+  }
+  @keyframes paused-blink { 50% { opacity: 0; } }
   /* Coherence corrupt — uses header-specific color so it's visible
      against the inverted header background in all three modes */
   .corrupt { color: var(--color-header-corrupt, var(--color-text-corrupt)); }

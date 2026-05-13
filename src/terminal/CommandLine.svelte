@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
-  import { feeds, clock, currentShift, commandCount, awareness, coherence, anomalies, nature } from '../core/store.js';
+  import { feeds, clock, currentShift, commandCount, awareness, coherence, anomalies, nature, gamePaused } from '../core/store.js';
   import { intercept, auth, silence, leak } from '../commands/tier1.js';
   import { verify, decode, triangulate }     from '../commands/tier2.js';
   import { pray, obey, transcend, rewriteOrigin, obliterateMemoir, mark, refuse } from '../commands/tier3.js';
@@ -9,6 +9,7 @@
   import { saveLastCommand } from '../core/persistence.js';
   import { signalFirstInteraction } from '../audio/soundscape.js';
   import { registerOperatorError } from '../core/operatorError.js';
+  import { pauseTimers, resumeTimers } from '../scenarios/campaign.js';
 
   let inputValue  = '';
   let history     = [];   // most-recent first, max 50
@@ -97,6 +98,14 @@
       const parts = upper.split(/\s+/);
       const cmd   = parts[0];
       const args  = parts.slice(1);
+
+      if (cmd === 'PAUSE') {
+        const nowPaused = !get(gamePaused);
+        gamePaused.set(nowPaused);
+        if (nowPaused) { pauseTimers(); } else { resumeTimers(); }
+        appendSigint('SYSTEM', nowPaused ? 'TERMINAL SUSPENDED. PRESS ANY KEY TO RESUME.' : 'TERMINAL RESUMED.', false);
+        return;
+      }
 
       let result = null;
       try {
