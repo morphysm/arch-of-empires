@@ -236,8 +236,9 @@ describe('runCascade(1) — Shift 1 event order', () => {
 });
 
 describe('runCascade(1) — unanswered event clock pressure', () => {
-  it('advances the clock by 2 minutes after 3 events with no player interaction', () => {
+  it('advances the clock by 2 minutes after 5 events with no player interaction', () => {
     runCascade(1);
+    runCascade(2);
     vi.advanceTimersByTime(30_001);
     expect(advance).toHaveBeenCalledWith(120, 'PLAYER_INACTION');
   });
@@ -270,11 +271,11 @@ describe('runCascade(4) — Shift 4 doctrinal triggers', () => {
   });
 });
 
-describe('runCascade(5) — three anomaly manifestations', () => {
-  it('fires three manifestAnomaly() calls in rapid succession', () => {
+describe('runCascade(5) — two anomaly manifestations', () => {
+  it('fires two manifestAnomaly() calls', () => {
     runCascade(5);
-    vi.advanceTimersByTime(27_000);
-    expect(manifestAnomaly).toHaveBeenCalledTimes(3);
+    vi.advanceTimersByTime(41_000);
+    expect(manifestAnomaly).toHaveBeenCalledTimes(2);
   });
 });
 

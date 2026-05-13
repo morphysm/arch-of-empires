@@ -82,7 +82,7 @@ function trackUnansweredEvent(eventType) {
 
   _unansweredEventCount += 1;
 
-  if (_unansweredEventCount >= 3) {
+  if (_unansweredEventCount >= 5) {
     _unansweredEventCount = 0;
     advance(120, 'PLAYER_INACTION');
   }
@@ -351,10 +351,9 @@ function _cascade5() {
     triggerDoctrinal('REV_16_12');
   });
 
-  // Three anomaly manifestations in rapid succession — OBEY becomes executable
+  // Two anomaly manifestations — OBEY becomes executable
   schedule(20_000, () => manifestAnomaly());
-  schedule(23_000, () => manifestAnomaly());
-  schedule(26_000, () => manifestAnomaly());
+  schedule(40_000, () => manifestAnomaly());
 
   schedule(45_000, () => {
     pushEvent('diplomat', {

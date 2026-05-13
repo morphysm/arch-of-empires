@@ -18,7 +18,7 @@ export function registerOperatorError() {
   }
 
   _count += 1;
-  const clockPenalty = _count % 5 === 0;
+  const clockPenalty = _count % 8 === 0;
   if (clockPenalty) advance(180, 'OPERATOR_ERROR');
 
   return { operatorErrorCount: _count, clockPenalty };

@@ -411,8 +411,8 @@ describe('operator errors', () => {
     expect(get(bandwidth).spent).toBe(2);
   });
 
-  it('advances the clock by 3 minutes on the 5th operator error in the same shift', () => {
-    for (let i = 0; i < 5; i++) intercept(`missing-${i}`);
+  it('advances the clock by 3 minutes on the 8th operator error in the same shift', () => {
+    for (let i = 0; i < 8; i++) intercept(`missing-${i}`);
     expect(advance).toHaveBeenCalledWith(180, 'OPERATOR_ERROR');
   });
 });
