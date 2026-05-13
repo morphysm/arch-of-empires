@@ -256,6 +256,7 @@ const TERMINAL_VOICE = {
   ASSIMILATION:    'The beast, which you saw, once was, now is not, and yet will come up out of the Abyss.',
   THE_LOOP:        'I am the Alpha and the Omega, the First and the Last, the Beginning and the End.',
   THE_GREAT_RESET: 'The one who acts, placing all actions in the Supreme, abandoning attachment, is untouched by sin, as a lotus leaf is untouched by water.',
+  THE_REFUSED:     'The beast, which you saw, once was, now is not, and yet will come up out of the Abyss and go to its destruction.',
 };
 
 // Revelation fragments injected into TACTICAL feed — read in flat military cadence.
