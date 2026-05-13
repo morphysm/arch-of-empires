@@ -236,10 +236,10 @@ describe('runCascade(1) — Shift 1 event order', () => {
 });
 
 describe('runCascade(1) — unanswered event clock pressure', () => {
-  it('advances the clock by 2 minutes after 5 events with no player interaction', () => {
+  it('advances the clock by 2 minutes after 4 events with no player interaction', () => {
     runCascade(1);
     runCascade(2);
-    vi.advanceTimersByTime(30_001);
+    vi.advanceTimersByTime(20_001);
     expect(advance).toHaveBeenCalledWith(120, 'PLAYER_INACTION');
   });
 

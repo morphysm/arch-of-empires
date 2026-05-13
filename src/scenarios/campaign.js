@@ -82,7 +82,7 @@ function trackUnansweredEvent(eventType) {
 
   _unansweredEventCount += 1;
 
-  if (_unansweredEventCount >= 5) {
+  if (_unansweredEventCount >= 4) {
     _unansweredEventCount = 0;
     advance(120, 'PLAYER_INACTION');
   }
