@@ -1,7 +1,7 @@
 import { get } from 'svelte/store';
 import {
   awareness, nature, coherence, feeds, clock,
-  currentShift, terminalState, bandwidth, anomalies,
+  currentShift, terminalState, bandwidth, anomalies, altarRevealed,
 } from '../core/store.js';
 import { advance } from '../core/clock.js';
 import { triggerDoctrinal } from '../feeds/doctrinal.js';
@@ -160,7 +160,7 @@ export function rewriteOrigin() {
 }
 
 export function mark() {
-  if (get(currentShift) < 6) throw new Error('MARK_NOT_REVEALED');
+  if (!get(altarRevealed)) throw new Error('MARK_NOT_REVEALED');
   if (get(terminalState)) return { command: '666', success: false, reason: 'ALREADY_RESOLVED' };
 
   terminalState.set('THE_MARKED');
@@ -175,7 +175,7 @@ export function mark() {
 }
 
 export function refuse() {
-  if (get(currentShift) < 6) throw new Error('REFUSE_NOT_REVEALED');
+  if (!get(altarRevealed)) throw new Error('REFUSE_NOT_REVEALED');
   if (get(terminalState)) return { command: 'REFUSE', success: false, reason: 'ALREADY_RESOLVED' };
 
   terminalState.set('THE_REFUSED');
