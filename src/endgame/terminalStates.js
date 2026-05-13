@@ -80,11 +80,11 @@ const STATE_SCREENS = {
   THE_REFUSED: {
     heading: 'REFUSED',
     body: [
-      'You refused the mark.',
-      'The world detonated.',
-      'No new era.',
-      'No beast.',
-      'Just fire.',
+      'YOU REFUSED THE MARK.',
+      'THE WORLD DETONATED.',
+      'NO NEW ERA.',
+      'JUST A RECOIL.',
+      'INTO FIRE.',
     ],
   },
 };

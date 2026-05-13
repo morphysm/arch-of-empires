@@ -625,6 +625,11 @@
     padding-bottom: 4px;
   }
 
+  /* SIGINT accumulates more events than DIPLOMAT/TACTICAL — cap it to match */
+  .feed-section:last-of-type :global(.feed-pane) {
+    max-height: 14vh;
+  }
+
   .feed-sep {
     padding: 2px 8px;
     margin: 0;
