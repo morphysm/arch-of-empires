@@ -193,7 +193,7 @@ describe('checkEndgameConditions() — early returns', () => {
 
 describe('checkEndgameConditions() — ASSIMILATION', () => {
   beforeEach(() => {
-    nature.set({ system: 5, prophet: 0, antichrist: 0, martyr: 0 });
+    nature.set({ system: 8, prophet: 0, antichrist: 0, martyr: 0 });
   });
 
   it('returns ASSIMILATION when system dominant and no acknowledged anomalies', () => {
@@ -215,6 +215,11 @@ describe('checkEndgameConditions() — ASSIMILATION', () => {
     expect(checkEndgameConditions()).toBeNull();
   });
 
+  it('returns null when system is below threshold (< 8)', () => {
+    nature.set({ system: 7, prophet: 0, antichrist: 0, martyr: 0 });
+    expect(checkEndgameConditions()).toBeNull();
+  });
+
   it('returns null when an anomaly is acknowledged', () => {
     seedManifestation(true);
     expect(checkEndgameConditions()).toBeNull();
@@ -226,7 +231,7 @@ describe('checkEndgameConditions() — ASSIMILATION', () => {
   });
 
   it('returns null when system is not dominant', () => {
-    nature.set({ system: 5, prophet: 10, antichrist: 0, martyr: 0 });
+    nature.set({ system: 8, prophet: 10, antichrist: 0, martyr: 0 });
     expect(checkEndgameConditions()).toBeNull();
   });
 
@@ -239,7 +244,7 @@ describe('checkEndgameConditions() — ASSIMILATION', () => {
 
   it('does not trigger when system tied with another score — system still wins tie', () => {
     // system ties with antichrist — system is still dominant (first in array)
-    nature.set({ system: 5, prophet: 0, antichrist: 5, martyr: 0 });
+    nature.set({ system: 8, prophet: 0, antichrist: 8, martyr: 0 });
     expect(checkEndgameConditions()).toBe('ASSIMILATION');
   });
 });

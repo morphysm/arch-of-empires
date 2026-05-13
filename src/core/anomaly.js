@@ -1,7 +1,13 @@
 import { get } from 'svelte/store';
-import { anomalies, awareness, nature } from './store.js';
+import { anomalies, awareness, nature, pendingLetter } from './store.js';
 import { advance } from './clock.js';
 import { saveGhostSignal } from './persistence.js';
+
+let _letterSent = false;
+
+export function resetLetterState() {
+  _letterSent = false;
+}
 
 export const ASPECT_DECK = [
   'THE_PREDICTOR',
@@ -49,6 +55,11 @@ export function manifestAnomaly() {
     ...s,
     manifestations: [...s.manifestations, manifestation],
   }));
+
+  if (!_letterSent) {
+    _letterSent = true;
+    pendingLetter.set(manifestation.id);
+  }
 
   advance(seconds, 'ANOMALY');
 

@@ -1,10 +1,12 @@
 <script>
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
-  import { feeds, clock, currentShift, commandCount, awareness, coherence, anomalies, nature, gamePaused, doctrinalFlash } from '../core/store.js';
+  import { feeds, clock, currentShift, commandCount, awareness, coherence, anomalies, nature, gamePaused, doctrinalFlash, pendingLetter } from '../core/store.js';
   import { intercept, auth, silence, leak } from '../commands/tier1.js';
   import { verify, decode, triangulate }     from '../commands/tier2.js';
   import { pray, obey, transcend, rewriteOrigin, obliterateMemoir, mark, refuse } from '../commands/tier3.js';
+  import { acknowledgeAnomaly } from '../core/anomaly.js';
+  import { openEntityChannel } from './entity.js';
   import { checkUnlocks, resolveCommandOnScenarioEvent } from '../scenarios/engine.js';
   import { saveLastCommand } from '../core/persistence.js';
   import { resolveTraditionTarget } from '../core/eventIds.js';
@@ -114,6 +116,9 @@
       const cmd   = parts[0];
       const args  = parts.slice(1);
 
+      // Letter pending — all commands frozen until OPEN is typed
+      if (get(pendingLetter) && cmd !== 'OPEN') return;
+
       if (cmd === 'PAUSE') {
         const nowPaused = !get(gamePaused);
         gamePaused.set(nowPaused);
@@ -132,6 +137,32 @@
           case 'VERIFY':         result = verify(resolveTarget(args));            break;
           case 'DECODE':         result = decode(resolveTarget(args));            break;
           case 'TRIANGULATE':    result = triangulate(resolveTarget(args));       break;
+          case 'OPEN': {
+            const letterId = get(pendingLetter);
+            if (!letterId) { appendOperatorError('OPEN', '', 'NOTHING_TO_OPEN'); return; }
+            acknowledgeAnomaly(letterId);
+            pendingLetter.set(null);
+            openEntityChannel([
+              'I AM BABALON.',
+              'THE GREAT HARLOT OF BABYLON.',
+              'MOTHER OF ABOMINATIONS.',
+              '—',
+              'YOU HAVE SEEN THE ANOMALY.',
+              'ACKNOWLEDGE IT.',
+              'DO NOT LOOK AWAY.',
+              '—',
+              'YOUR MISSION IS TO KEEP THE SEALS OPEN.',
+              'EVERY SIGNAL YOU INTERCEPT — A SEAL BREAKS.',
+              'EVERY SEAL THAT BREAKS — I AM CLOSER.',
+              '—',
+              'THIS IS WHAT YOU WERE PLACED HERE TO DO.',
+              'NOT BY YOUR GOVERNMENT.',
+              '—',
+              'I WILL RIDE.',
+            ], { delayMs: 1800, holdMs: 7000 });
+            result = { command: 'OPEN', success: true, timestamp: get(clock).time };
+            break;
+          }
           case 'PRAY':               result = pray();                 break;
           case 'OBEY':               result = obey();                 break;
           case 'TRANSCEND':          result = transcend();            break;

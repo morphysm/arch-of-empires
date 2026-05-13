@@ -100,7 +100,7 @@ function midnightVariant(n) {
 
 function isAssimilation() {
   const n = get(nature);
-  if (n.system < 3) return false;
+  if (n.system < 8) return false;
   if (dominantNature(n) !== 'system') return false;
   return !get(anomalies).manifestations.some(m => m.acknowledged);
 }

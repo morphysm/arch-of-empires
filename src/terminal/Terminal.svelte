@@ -8,7 +8,7 @@
     clock, coherence, currentShift, terminalState, terminalMode,
     bandwidth, awareness, nature, feeds, anomalies,
     commandCount, playerLocation, entityMode, entityLines, altarRevealed,
-    gamePaused, doctrinalFlash,
+    gamePaused, doctrinalFlash, pendingLetter,
   } from '../core/store.js';
   import { fetchPlayerLocation } from '../core/geolocate.js';
   import { closeEntityChannel } from './entity.js';
@@ -19,6 +19,7 @@
     startConnectionSequence, resetVoiceForNewRun, playMarkMelody,
   } from '../audio/soundscape.js';
   import { startShift, resetCampaignState, pauseTimers, resumeTimers } from '../scenarios/campaign.js';
+  import { resetLetterState } from '../core/anomaly.js';
   import { resetEngineState } from '../scenarios/engine.js';
   import { loadCurrentShift } from '../core/persistence.js';
 
@@ -168,6 +169,8 @@
     playerLocation.set(null);
     closeEntityChannel();
     altarRevealed.set(false);
+    pendingLetter.set(null);
+    resetLetterState();
     menuOpen = false;
     resetVoiceForNewRun();
     startShift(1);
@@ -193,6 +196,8 @@
     playerLocation.set(null);
     closeEntityChannel();
     altarRevealed.set(false);
+    pendingLetter.set(null);
+    resetLetterState();
     menuOpen = false;
     resetVoiceForNewRun();
     const savedShift = await loadCurrentShift();
@@ -515,6 +520,17 @@
     </div>
   {/if}
 
+  <!-- ── Babalon's letter — terminal freezes until OPEN is typed ── -->
+  {#if $pendingLetter}
+    <div class="letter-overlay">
+      <div class="letter-body">
+        <div class="letter-seal">✉</div>
+        <div class="letter-label">CONFIDENTIAL</div>
+        <div class="letter-hint">TYPE OPEN</div>
+      </div>
+    </div>
+  {/if}
+
   <!-- ── Terminal state overlay ─────────────────────────────────── -->
   <!-- When set: full viewport, no animation, no explanation. -->
   {#if endgame}
@@ -791,10 +807,82 @@
     to   { opacity: 1; letter-spacing: 0.18em; }
   }
 
+  /* ── Babalon's letter overlay ──────────────────────────────── */
+
+  .letter-overlay {
+    position: fixed;
+    inset: 0;
+    background: #000000;
+    z-index: 95;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .letter-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9em;
+    animation: letter-arrive 1.8s ease forwards;
+  }
+
+  .letter-seal {
+    font-size: 72px;
+    color: #cc0000;
+    text-shadow: 0 0 18px #cc0000, 0 0 40px #990000;
+    animation: letter-pulse 3.5s ease-in-out infinite;
+    font-family: serif;
+  }
+
+  .letter-label {
+    font-family: var(--font-primary);
+    font-size: 16px;
+    letter-spacing: 0.5em;
+    color: #cc0000;
+    text-shadow: 0 0 10px #cc0000;
+  }
+
+  .letter-hint {
+    font-family: var(--font-primary);
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    color: #660000;
+    margin-top: 1.2em;
+    animation: letter-blink 1.4s step-end infinite;
+  }
+
+  @keyframes letter-arrive {
+    0%   { opacity: 0; transform: translateY(12px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes letter-pulse {
+    0%, 100% { text-shadow: 0 0 18px #cc0000, 0 0 40px #990000; }
+    50%       { text-shadow: 0 0 28px #ff2200, 0 0 60px #cc0000, 0 0 90px #880000; }
+  }
+
+  @keyframes letter-blink { 50% { opacity: 0; } }
+
   /* ── NMCC line shift — global, targets FeedPane event lines ── */
   /* Applies CSS transform via --nmcc-jitter custom property set  */
   /* from JS. Resets to 0px after shiftDuration ms.              */
   :global(.mode-nmcc .event-line) {
     transform: translateX(var(--nmcc-jitter, 0px));
+  }
+
+  /* ── NMCC overlay — projection scale ───────────────────────── */
+  /* 18×11 ft floor screen: each character reads from across the  */
+  /* room. Heading dominates; body lines stay small beneath it.   */
+  :global(.mode-nmcc .overlay-screen) {
+    max-width: 88vw;
+  }
+  :global(.mode-nmcc .overlay-heading) {
+    font-size: clamp(52px, 6vw, 92px);
+    letter-spacing: 0.5em;
+  }
+  :global(.mode-nmcc .overlay-line) {
+    font-size: 16px;
+    letter-spacing: 0.12em;
   }
 </style>

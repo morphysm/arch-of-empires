@@ -43,6 +43,9 @@ export const entityLines = writable([]);
 
 export const altarRevealed = writable(false);
 
+// Set to a manifestation ID when Babalon's letter arrives. Null after OPEN.
+export const pendingLetter = writable(null);
+
 export const gamePaused = writable(false);
 
 export const doctrinalFlash = writable(false);
