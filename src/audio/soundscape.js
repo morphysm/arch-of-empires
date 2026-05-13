@@ -657,29 +657,50 @@ export function updateVoiceCoherence(coherenceValue) {
 }
 
 /**
- * 8-bit square-wave sting — fires only on THE_MARKED ending.
- * Pac-Man death: 20 descending chromatic steps, Bb4 → Eb3, ~65ms each.
- * Short percussive envelope creates the wah-wah-wah stutter.
+ * THE_MARKED ending sting.
+ * Corrupted chromatic descent: two steps swapped, one repeated, micro-pitch
+ * drift per note, 40Hz sub undertone. Familiar shape made irrecognisable.
  */
 export function playMarkMelody() {
   if (!_ready) return;
 
+  const crusher = new Tone.BitCrusher(5);
   const synth = new Tone.Synth({
     oscillator: { type: 'square' },
     envelope:   { attack: 0.002, decay: 0.05, sustain: 0.1, release: 0.04 },
     volume:     -2,
+  }).chain(crusher, Tone.getDestination());
+
+  const sub = new Tone.Synth({
+    oscillator: { type: 'sine' },
+    envelope:   { attack: 0.01, decay: 2.2, sustain: 0, release: 0.1 },
+    volume:     -20,
   }).toDestination();
 
-  const death = [
-    'Bb4','A4','Ab4','G4','Gb4','F4','E4','Eb4',
-    'D4', 'Db4','C4','B3','Bb3','A3','Ab3','G3',
-    'Gb3','F3', 'E3','Eb3',
+  const notes = [
+    'Bb4','A4','Ab4','G4','Gb4','F4',
+    'D4','E4',
+    'Eb4','Db4','C4','B3',
+    'Bb3','Bb3',
+    'A3','Ab3',
+    'Gb3','F3','E3','Eb3',
   ];
+
+  const drifts = [0, 9, -13, 0, 7, -6, 18, 0, -11, 5, 0, -16, 0, 22, -8, 0, 14, -5, 0, -10];
 
   const now  = Tone.now() + 0.05;
   const step = 0.065;
-  death.forEach((note, i) => synth.triggerAttackRelease(note, '32n', now + i * step));
-  disposeAfter(synth, 2500);
+
+  sub.triggerAttackRelease(40, '1n', now);
+
+  notes.forEach((note, i) => {
+    synth.detune.setValueAtTime(drifts[i] ?? 0, now + i * step);
+    synth.triggerAttackRelease(note, '32n', now + i * step);
+  });
+
+  disposeAfter(synth,   2500);
+  disposeAfter(crusher, 2500);
+  disposeAfter(sub,     2500);
 }
 
 /**
@@ -729,3 +750,4 @@ export function speakTerminalStateResolution(state) {
 
   window.speechSynthesis.speak(utt);
 }
+
