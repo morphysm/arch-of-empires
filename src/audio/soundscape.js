@@ -30,6 +30,7 @@ let _handshakeFired      = false; // guard: handshake plays only once per sessio
 let _connectionActive    = false; // true while pre-interaction loop is running
 let _connectionTimer     = null;  // setTimeout handle for the connection sequence
 let _sustainNode         = null;  // quiet carrier tone after second handshake
+let _altarMode           = false; // true while entity channel is open — suppresses other voice/feed sounds
 
 // ── Init ───────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,7 @@ function disposeAfter(node, ms) {
  */
 export function playFeedEvent(feedType) {
   if (!_ready) return;
+  if (_altarMode) return;
 
   if (feedType === 'DIPLOMAT') {
     // Telephone relay — metallic, percussive ping
@@ -216,6 +218,7 @@ export function stopSoundscape() {
   _nmccDeathSpoken = false;
   _handshakeFired   = false;
   _connectionActive = false;
+  _altarMode        = false;
   clearTimeout(_connectionTimer);
   _connectionTimer  = null;
   if (_sustainNode) {
@@ -347,6 +350,7 @@ function _playRadioClick() {
 
 function _speak(text, opts = {}) {
   if (!_voiceActive || !('speechSynthesis' in window)) return;
+  if (_altarMode && !opts.force) return;
 
   if (opts.click !== false) _playRadioClick();
 
@@ -417,6 +421,30 @@ export function speakTacticalEvent(event) {
 export function speakDoctrinal(event) {
   if (!_ready || !_voiceActive) return;
   _speak(event.content, { rate: 0.72, pitch: 0.80 });
+}
+
+/**
+ * Opens altar mode: cancels any queued voice and suppresses all subsequent
+ * voice calls and feed sound effects until exitAltarMode() is called.
+ * Called when the entity channel opens.
+ */
+export function enterAltarMode() {
+  _cancelVoice();
+  _altarMode = true;
+}
+
+export function exitAltarMode() {
+  _altarMode = false;
+}
+
+/**
+ * Speaks an entity channel line in the warm Altar voice.
+ * Bypasses altar-mode suppression — this IS the voice that should be heard.
+ * No radio click; no flat military cadence.
+ */
+export function speakEntityLine(text) {
+  if (!_voiceActive) return;
+  _speak(text, { rate: 0.68, pitch: 0.92, click: false, force: true });
 }
 
 /**
@@ -585,6 +613,7 @@ export function resetVoiceForNewRun() {
 
   _handshakeFired  = false;
   _nmccDeathSpoken = false;
+  _altarMode       = false;
 
   // Restart connection sequence for the new run
   startConnectionSequence();

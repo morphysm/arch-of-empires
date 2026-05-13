@@ -1,4 +1,5 @@
 import { entityMode, entityLines } from '../core/store.js';
+import { enterAltarMode, exitAltarMode, speakEntityLine } from '../audio/soundscape.js';
 
 let _closeTimer = null;
 let _lineTimers = [];
@@ -19,15 +20,20 @@ export function openEntityChannel(lines, { delayMs = 2200, holdMs = 5000 } = {})
   clearEntityTimers();
   entityMode.set(true);
   entityLines.set([]);
+  enterAltarMode();
 
   lines.forEach((line, i) => {
-    const id = setTimeout(() => entityLines.update(ls => [...ls, line]), i * delayMs);
+    const id = setTimeout(() => {
+      entityLines.update(ls => [...ls, line]);
+      speakEntityLine(line);
+    }, i * delayMs);
     _lineTimers.push(id);
   });
 
   _closeTimer = setTimeout(() => {
     entityMode.set(false);
     entityLines.set([]);
+    exitAltarMode();
     _closeTimer = null;
   }, lines.length * delayMs + holdMs);
 }
@@ -36,4 +42,5 @@ export function closeEntityChannel() {
   clearEntityTimers();
   entityMode.set(false);
   entityLines.set([]);
+  exitAltarMode();
 }

@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { entityMode, entityLines } from '../src/core/store.js';
+
+vi.mock('../src/audio/soundscape.js', () => ({
+  enterAltarMode:  vi.fn(),
+  exitAltarMode:   vi.fn(),
+  speakEntityLine: vi.fn(),
+}));
+
 import { openEntityChannel, closeEntityChannel } from '../src/terminal/entity.js';
 
 beforeEach(() => {
