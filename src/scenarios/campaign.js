@@ -215,7 +215,7 @@ export async function startShift(shiftNum) {
     });
   }
 
-  if (shiftNum === 4) drawAspects();
+  if (shiftNum === 3) drawAspects();
 
   // Shift 10: breach fires after 60 real seconds — no cascade event timers
   if (shiftNum === 10) {
@@ -306,6 +306,10 @@ function _cascade3() {
   // Hidden/forbidden unlock on player action — engine.checkUnlocks() handles this
   // when called after commands in CommandLine.svelte.
   loadScenario('ghost-submarine');
+
+  // Aspects just drawn — first manifestation fires into the quiet window
+  // before anything else competes. This is when Babalon's letter arrives.
+  schedule(20_000, () => manifestAnomaly());
 
   schedule(90_000, () => triggerBreach(3));
 }
@@ -572,8 +576,6 @@ function _breach(shiftNum) {
       break;
 
     case 2:
-      // One presidential call confirmed fake — THE_MIMIC manifests
-      manifestAnomaly();
       startHaunting(2);
       break;
 

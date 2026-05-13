@@ -159,7 +159,7 @@
               'NOT BY YOUR GOVERNMENT.',
               '—',
               'I WILL RIDE.',
-            ], { delayMs: 1800, holdMs: 7000 });
+            ], { delayMs: 1800, holdMs: 7000, variant: 'babalon' });
             result = { command: 'OPEN', success: true, timestamp: get(clock).time };
             break;
           }

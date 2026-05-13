@@ -7,7 +7,7 @@
   import {
     clock, coherence, currentShift, terminalState, terminalMode,
     bandwidth, awareness, nature, feeds, anomalies,
-    commandCount, playerLocation, entityMode, entityLines, altarRevealed,
+    commandCount, playerLocation, entityMode, entityLines, entityVariant, altarRevealed,
     gamePaused, doctrinalFlash, pendingLetter,
   } from '../core/store.js';
   import { fetchPlayerLocation } from '../core/geolocate.js';
@@ -436,7 +436,7 @@
         </div>
       </section>
 
-      <section class="entity-channel">
+      <section class="entity-channel" class:entity-babalon={$entityVariant === 'babalon'}>
         <div class="entity-rule"></div>
         {#each $entityLines as line (line + $entityLines.indexOf(line))}
           <div class="entity-line">{line}</div>
@@ -573,6 +573,8 @@
     white-space: nowrap;
     overflow: hidden;
     text-shadow: none;
+    position: relative;
+    z-index: 96;
   }
 
   .header-left,
@@ -663,6 +665,8 @@
     background: var(--color-statusbar-bg, var(--color-highlight-bg));
     color: var(--color-statusbar-text, var(--color-highlight-text));
     text-shadow: none;
+    position: relative;
+    z-index: 96;
   }
 
   .status-line {
@@ -802,6 +806,15 @@
     animation: entity-reveal 600ms ease-in both;
   }
 
+  .entity-babalon .entity-line {
+    color: #cc0000 !important;
+    text-shadow: 0 0 10px #990000 !important;
+  }
+
+  .entity-babalon .entity-rule {
+    border-color: #660000;
+  }
+
   @keyframes entity-reveal {
     from { opacity: 0; letter-spacing: 0.35em; }
     to   { opacity: 1; letter-spacing: 0.18em; }
@@ -817,6 +830,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    font-family: 'Courier New', monospace !important;
+    color: #cc0000 !important;
+    text-shadow: none !important;
   }
 
   .letter-body {
@@ -829,25 +845,24 @@
 
   .letter-seal {
     font-size: 72px;
-    color: #cc0000;
-    text-shadow: 0 0 18px #cc0000, 0 0 40px #990000;
+    font-family: serif !important;
+    color: #cc0000 !important;
+    text-shadow: 0 0 18px #cc0000, 0 0 40px #990000 !important;
     animation: letter-pulse 3.5s ease-in-out infinite;
-    font-family: serif;
   }
 
   .letter-label {
-    font-family: var(--font-primary);
     font-size: 16px;
     letter-spacing: 0.5em;
-    color: #cc0000;
-    text-shadow: 0 0 10px #cc0000;
+    color: #cc0000 !important;
+    text-shadow: 0 0 10px #cc0000 !important;
   }
 
   .letter-hint {
-    font-family: var(--font-primary);
     font-size: 12px;
     letter-spacing: 0.25em;
-    color: #660000;
+    color: #cc0000 !important;
+    text-shadow: none !important;
     margin-top: 1.2em;
     animation: letter-blink 1.4s step-end infinite;
   }

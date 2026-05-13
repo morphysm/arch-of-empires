@@ -180,13 +180,13 @@ describe('startShift() — ghost command injection', () => {
 // ── startShift() — anomaly engine activation ──────────────────────────────
 
 describe('startShift() — anomaly engine', () => {
-  it('calls drawAspects() on Shift 4', async () => {
-    await startShift(4);
+  it('calls drawAspects() on Shift 3', async () => {
+    await startShift(3);
     expect(drawAspects).toHaveBeenCalledOnce();
   });
 
-  it('does not call drawAspects() on Shift 3', async () => {
-    await startShift(3);
+  it('does not call drawAspects() on Shift 4', async () => {
+    await startShift(4);
     expect(drawAspects).not.toHaveBeenCalled();
   });
 

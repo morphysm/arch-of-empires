@@ -38,8 +38,9 @@ export const commandCount = writable(0);
 // { city, country, region, isVPN } | null
 export const playerLocation = writable(null);
 
-export const entityMode  = writable(false);
-export const entityLines = writable([]);
+export const entityMode    = writable(false);
+export const entityLines   = writable([]);
+export const entityVariant = writable('default'); // 'default' | 'babalon'
 
 export const altarRevealed = writable(false);
 
