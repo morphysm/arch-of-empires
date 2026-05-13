@@ -9,9 +9,10 @@ vi.mock('../src/core/clock.js',          () => ({ advance: vi.fn() }));
 vi.mock('../src/feeds/doctrinal.js',     () => ({ triggerDoctrinal: vi.fn(), resetShiftTracking: vi.fn() }));
 vi.mock('../src/core/anomaly.js',        () => ({ drawAspects: vi.fn(), manifestAnomaly: vi.fn() }));
 vi.mock('../src/core/persistence.js',   () => ({
-  loadGhostSignals: vi.fn().mockResolvedValue([]),
-  loadLastCommand:  vi.fn().mockResolvedValue(null),
-  saveGhostSignal:  vi.fn(),
+  loadGhostSignals:  vi.fn().mockResolvedValue([]),
+  loadLastCommand:   vi.fn().mockResolvedValue(null),
+  saveGhostSignal:   vi.fn(),
+  saveCurrentShift:  vi.fn(),
 }));
 vi.mock('../src/scenarios/engine.js',   () => ({
   loadScenario: vi.fn().mockResolvedValue({}),

@@ -14,11 +14,12 @@
   import { resolveTerminalState } from '../endgame/terminalStates.js';
   import {
     initSoundscape, playFeedEvent, playDoctrinal, corruptSoundLayer, stopSoundscape,
-    setVoiceMode, speakTacticalEvent, updateVoiceCoherence, speakTerminalStateResolution,
+    setVoiceMode, speakTacticalEvent, speakDoctrinal, updateVoiceCoherence, speakTerminalStateResolution,
     startConnectionSequence, resetVoiceForNewRun, playMarkMelody,
   } from '../audio/soundscape.js';
   import { startShift, resetCampaignState } from '../scenarios/campaign.js';
   import { resetEngineState } from '../scenarios/engine.js';
+  import { loadCurrentShift } from '../core/persistence.js';
 
   // ── Per-mode corruption config ─────────────────────────────────
   const CORRUPTION_CONFIG = {
@@ -190,8 +191,9 @@
   let _prevManifestations = 0;
   let unsubAnomalies;
 
-  onMount(() => {
-    startShift(1);
+  onMount(async () => {
+    const savedShift = await loadCurrentShift();
+    startShift(savedShift ?? 1);
 
     // Reset coherence display whenever the real value changes
     unsubCoherence = coherence.subscribe(val => {
@@ -301,7 +303,9 @@
 
   $: {
     if ($feeds.diplomat.length > _prevDiplomat) {
+      const newDiplomat = $feeds.diplomat.slice(_prevDiplomat);
       playFeedEvent('DIPLOMAT');
+      newDiplomat.filter(e => e.isDoctrinal).forEach(e => speakDoctrinal(e));
       _prevDiplomat = $feeds.diplomat.length;
     }
   }
@@ -322,6 +326,7 @@
         _doctrinalFired = true;
         playDoctrinal();
       }
+      newEvents.filter(e => e.isDoctrinal).forEach(e => speakDoctrinal(e));
       _prevSigint = $feeds.sigint.length;
     }
   }

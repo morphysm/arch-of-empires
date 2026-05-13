@@ -410,6 +410,16 @@ export function speakTacticalEvent(event) {
 }
 
 /**
+ * Speaks a doctrinal fragment verbatim — slower and heavier than tactical cadence.
+ * Called for doctrinal events injected into DIPLOMAT and SIGINT feeds.
+ * TACTICAL doctrinal events are handled separately by speakTacticalEvent().
+ */
+export function speakDoctrinal(event) {
+  if (!_ready || !_voiceActive) return;
+  _speak(event.content, { rate: 0.72, pitch: 0.80 });
+}
+
+/**
  * Breach announcement for the given Shift number.
  * Shift 10 is handled separately by startVoiceCountdown().
  */

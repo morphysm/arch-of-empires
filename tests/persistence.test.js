@@ -7,6 +7,8 @@ import {
   loadGhostSignals,
   saveLastCommand,
   loadLastCommand,
+  saveCurrentShift,
+  loadCurrentShift,
   _resetDB,
 } from '../src/core/persistence.js';
 
@@ -111,5 +113,31 @@ describe('saveLastCommand / loadLastCommand — round-trip', () => {
 describe('loadLastCommand — nothing saved', () => {
   it('returns null when no command has been saved', async () => {
     expect(await loadLastCommand()).toBeNull();
+  });
+});
+
+describe('saveCurrentShift / loadCurrentShift — round-trip', () => {
+  it('returns null when no shift has been saved', async () => {
+    expect(await loadCurrentShift()).toBeNull();
+  });
+
+  it('returns the saved shift number', async () => {
+    await saveCurrentShift(5);
+    expect(await loadCurrentShift()).toBe(5);
+  });
+
+  it('overwrites the previous value — only the most recent shift is kept', async () => {
+    await saveCurrentShift(3);
+    await saveCurrentShift(7);
+    expect(await loadCurrentShift()).toBe(7);
+  });
+
+  it('is independent of clock and command saves', async () => {
+    await saveClock({ time: '11:55:00', debtLedger: [] });
+    await saveLastCommand('INTERCEPT sig-001');
+    await saveCurrentShift(4);
+    expect(await loadCurrentShift()).toBe(4);
+    expect(await loadClock()).not.toBeNull();
+    expect(await loadLastCommand()).toBe('INTERCEPT sig-001');
   });
 });

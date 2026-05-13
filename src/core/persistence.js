@@ -47,6 +47,16 @@ export async function loadLastCommand() {
   return (await db.get('clockState', 'lastCommand')) ?? null;
 }
 
+export async function saveCurrentShift(shiftNum) {
+  const db = await getDB();
+  await db.put('clockState', shiftNum, 'currentShift');
+}
+
+export async function loadCurrentShift() {
+  const db = await getDB();
+  return (await db.get('clockState', 'currentShift')) ?? null;
+}
+
 // Resets the DB singleton so tests can inject a fresh IDBFactory
 export function _resetDB() {
   _db = null;

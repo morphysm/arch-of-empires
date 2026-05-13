@@ -6,7 +6,7 @@ import {
 import { advance }                            from '../core/clock.js';
 import { drawAspects, manifestAnomaly }       from '../core/anomaly.js';
 import { triggerDoctrinal, resetShiftTracking } from '../feeds/doctrinal.js';
-import { loadGhostSignals, loadLastCommand }  from '../core/persistence.js';
+import { loadGhostSignals, loadLastCommand, saveCurrentShift } from '../core/persistence.js';
 import { loadScenario, endShift as engineEndShift } from '../scenarios/engine.js';
 import { checkEndgameConditions, resolveTerminalState } from '../endgame/terminalStates.js';
 import { speakBreachAnnouncement, speakPsalm234, startVoiceCountdown } from '../audio/soundscape.js';
@@ -140,6 +140,7 @@ export async function startShift(shiftNum) {
   clearTimers();
   resetShiftTracking();
   currentShift.set(shiftNum);
+  saveCurrentShift(shiftNum);
   terminalMode.set(modeForAct(shiftNum));
   bandwidth.set({ total: 100, spent: 0 });
   _commandCountAtShiftStart = get(commandCount);
