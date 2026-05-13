@@ -439,16 +439,6 @@ export function exitAltarMode() {
 }
 
 /**
- * Speaks an entity channel line in the warm Altar voice.
- * Bypasses altar-mode suppression — this IS the voice that should be heard.
- * No radio click; no flat military cadence.
- */
-export function speakEntityLine(text) {
-  if (!_voiceActive) return;
-  _speak(text, { rate: 0.68, pitch: 0.92, click: false, force: true });
-}
-
-/**
  * Breach announcement for the given Shift number.
  * Shift 10 is handled separately by startVoiceCountdown().
  */
