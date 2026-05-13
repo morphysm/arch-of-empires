@@ -170,9 +170,39 @@
     startShift(1);
   }
 
+  async function resumeFromLastShift() {
+    resetCampaignState();
+    resetEngineState();
+    clock.update(c => ({ ...c, time: '11:54:00', debtLedger: [] }));
+    feeds.set({ diplomat: [], tactical: [], sigint: [], doctrinal: [] });
+    awareness.set(0);
+    nature.set({ system: 0, prophet: 0, antichrist: 0, martyr: 0 });
+    anomalies.set({ aspects: [], manifestations: [] });
+    terminalState.set(null);
+    coherence.set(100);
+    _prevDiplomat = _prevTactical = _prevSigint = _prevManifestations = 0;
+    _doctrinalFired = false;
+    _terminalStateSpeaking = false;
+    _geolocateFired = false;
+    commandCount.set(0);
+    playerLocation.set(null);
+    closeEntityChannel();
+    altarRevealed.set(false);
+    menuOpen = false;
+    resetVoiceForNewRun();
+    const savedShift = await loadCurrentShift();
+    startShift(savedShift ?? 1);
+  }
+
   function handleMenuKeydown(e) {
     e.stopPropagation(); // keep menu keys out of the global handler
-    if (e.key === 'Escape' || e.key === 'r' || e.key === 'R') { menuOpen = false; }
+    if (e.key === 'Escape' || e.key === 'r' || e.key === 'R') {
+      if ((e.key === 'r' || e.key === 'R') && get(terminalState)) {
+        resumeFromLastShift();
+      } else {
+        menuOpen = false;
+      }
+    }
     else if (e.key === 'n' || e.key === 'N') { newRun(); }
     else if (e.key === 'q' || e.key === 'Q') {
       document.exitFullscreen?.().catch(() => {});
