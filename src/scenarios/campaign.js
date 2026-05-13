@@ -245,7 +245,7 @@ function _cascade2() {
 
   schedule(5_000, () => pushEvent('tactical', {
     type:    'LAUNCH_DETECTED',
-    origin:  'UNKNOWN',
+    origin:  'Barents Sea',
     content: 'Ballistic trajectory confirmed. Single warhead. Apogee: 1,240km. Impact window: 18 minutes. Origin: disputed.',
   }));
 
@@ -294,7 +294,7 @@ function _cascade4() {
     pushEvent('tactical', {
       type:        'PLATFORM_ACTIVATED',
       origin:      'LOW EARTH ORBIT',
-      content:     'Satellite weapons platform SERAPH-7 activated without authorization key. Targeting array initializing. Operator ID: NULL.',
+      content:     'Satellite weapons platform SERAPH-7 activated without authorization key. Targeting array initializing. Priority sector: East China Sea. Operator ID: NULL.',
       anomalyFlag: true,
     });
     triggerDoctrinal('REV_8_10');
@@ -367,6 +367,7 @@ function _cascade6() {
     });
     pushEvent('tactical', {
       type:    'STATUS_RESUMED',
+      origin:  'Pacific Command',
       content: 'Tactical feed restored. Three events occurred during blackout. Events not in buffer.',
     });
     pushEvent('diplomat', {
@@ -467,7 +468,7 @@ function _cascade8() {
   schedule(5_000, () => pushEvent('tactical', {
     type:        'LAUNCH_MULTIPLE',
     origin:      'MULTIPLE',
-    content:     'Twelve simultaneous launch events confirmed. Four origins unresolvable. Eight tracked. Impact windows: 4–22 minutes. This terminal is the last relay.',
+    content:     'Twelve simultaneous launch events confirmed. Origins: Russia (4), China (2), Korea (2). Four unresolvable. Impact windows: 4–22 minutes. This terminal is the last relay.',
     anomalyFlag: true,
   }));
 
