@@ -8,6 +8,7 @@
     clock, coherence, currentShift, terminalState, terminalMode,
     bandwidth, awareness, nature, feeds, anomalies,
     commandCount, playerLocation, entityMode, entityLines, altarRevealed,
+    gamePaused,
   } from '../core/store.js';
   import { fetchPlayerLocation } from '../core/geolocate.js';
   import { closeEntityChannel } from './entity.js';
@@ -18,7 +19,6 @@
     startConnectionSequence, resetVoiceForNewRun, playMarkMelody,
   } from '../audio/soundscape.js';
   import { startShift, resetCampaignState, pauseTimers, resumeTimers } from '../scenarios/campaign.js';
-  import { gamePaused } from '../core/store.js';
   import { resetEngineState } from '../scenarios/engine.js';
   import { loadCurrentShift } from '../core/persistence.js';
 
@@ -234,17 +234,19 @@
   let _prevManifestations = 0;
   let unsubAnomalies;
 
-  function _resumeOnAnyKey(e) {
-    if (!get(gamePaused)) return;
+  function handlePausedKey(e) {
     if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
     e.preventDefault();
-    e.stopPropagation();
     gamePaused.set(false);
     resumeTimers();
+    tick().then(() => document.querySelector('.cmd-input')?.focus());
+  }
+
+  function autoFocus(node) {
+    node.focus();
   }
 
   onMount(async () => {
-    window.addEventListener('keydown', _resumeOnAnyKey, true);
     const savedShift = await loadCurrentShift();
     startShift(savedShift ?? 1);
 
@@ -279,7 +281,6 @@
   });
 
   onDestroy(() => {
-    window.removeEventListener('keydown', _resumeOnAnyKey, true);
     clearTimers();
     unsubCoherence?.();
     unsubMode?.();
@@ -470,6 +471,16 @@
     <CommandLine />
   </footer>
 
+  <!-- ── Paused overlay — intercepts all keystrokes to resume ─── -->
+  {#if $gamePaused}
+    <div
+      class="paused-overlay"
+      tabindex="0"
+      use:autoFocus
+      on:keydown={handlePausedKey}
+    ></div>
+  {/if}
+
   <!-- ── Pause menu — z-index 200, above endgame overlay ──────── -->
   {#if menuOpen}
     <div
@@ -552,6 +563,14 @@
     color: var(--color-text-dim);
   }
   @keyframes paused-blink { 50% { opacity: 0; } }
+
+  .paused-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 150;
+    outline: none;
+    background: transparent;
+  }
   /* Coherence corrupt — uses header-specific color so it's visible
      against the inverted header background in all three modes */
   .corrupt { color: var(--color-header-corrupt, var(--color-text-corrupt)); }
