@@ -421,7 +421,8 @@ export function speakTacticalEvent(event) {
  */
 export function speakDoctrinal(event) {
   if (!_ready || !_voiceActive) return;
-  _speak(event.content, { rate: 0.72, pitch: 0.80 });
+  const text = event.content.replace(/morphyst/gi, 'Morfist');
+  _speak(text, { rate: 0.72, pitch: 0.80 });
 }
 
 /**

@@ -151,7 +151,7 @@
 
       appendResult(result);
 
-      if (result?.isDoctrinal && result.reason !== 'BANDWIDTH_EXCEEDED') {
+      if (result?.isDoctrinal && result?.success === true && result.reason !== 'BANDWIDTH_EXCEEDED') {
         doctrinalFlash.set(true);
         setTimeout(() => doctrinalFlash.set(false), 3500);
       }

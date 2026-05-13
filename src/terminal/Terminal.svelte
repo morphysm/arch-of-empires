@@ -627,7 +627,7 @@
 
   /* SIGINT accumulates more events than DIPLOMAT/TACTICAL — cap it to match */
   .feed-section:last-of-type :global(.feed-pane) {
-    max-height: 11vh;
+    max-height: 13vh;
   }
 
   .feed-sep {

@@ -22,6 +22,7 @@ let _evtCounter    = 0;  // sequential short IDs so players can type them
 let _commandCountAtShiftStart = 0;
 let _commandCountAtLastEvent = 0;
 let _unansweredEventCount = 0;
+let _inactivityBlocks = 0;
 let _gitaLimbsFired = false;
 let _timersPaused  = false;
 
@@ -33,6 +34,7 @@ export function resetCampaignState() {
   _commandCountAtShiftStart = 0;
   _commandCountAtLastEvent = 0;
   _unansweredEventCount = 0;
+  _inactivityBlocks = 0;
   _gitaLimbsFired = false;
   _timersPaused   = false;
   resetOperatorErrors();
@@ -78,13 +80,19 @@ function trackUnansweredEvent(eventType) {
   if (currentCommandCount !== _commandCountAtLastEvent) {
     _commandCountAtLastEvent = currentCommandCount;
     _unansweredEventCount = 0;
+    _inactivityBlocks = 0;
   }
 
   _unansweredEventCount += 1;
 
-  if (_unansweredEventCount >= 4) {
+  if (_unansweredEventCount >= 3) {
     _unansweredEventCount = 0;
+    _inactivityBlocks += 1;
     advance(120, 'PLAYER_INACTION');
+    if (_inactivityBlocks >= 2) {
+      _inactivityBlocks = 0;
+      advance(43200, 'PLAYER_INACTION');
+    }
   }
 }
 
@@ -174,6 +182,7 @@ export async function startShift(shiftNum) {
   _commandCountAtShiftStart = get(commandCount);
   _commandCountAtLastEvent = get(commandCount);
   _unansweredEventCount = 0;
+  _inactivityBlocks = 0;
 
   await loadGhostSignals();
   await injectGhostCommand(shiftNum);
