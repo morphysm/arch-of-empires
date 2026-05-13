@@ -1,3 +1,29 @@
+const TRADITION_ALIASES = {
+  'GITA':           'GITA',
+  'BHAGAVAD GITA':  'GITA',
+  'BHAGAVAD-GITA':  'GITA',
+  'REVELATION':     'REVELATION',
+  'REVELATIONS':    'REVELATION',
+  'BIBLE':          'REVELATION',
+  'MORPHYSM':       'MORPHYSM',
+};
+
+/**
+ * If rawTarget matches a tradition name or alias, returns the ID of the most
+ * recent doctrinal event with that tradition from the feeds. Returns null if
+ * rawTarget is not a tradition alias or no matching event is in the feeds.
+ */
+export function resolveTraditionTarget(rawTarget, feedsValue) {
+  const tradition = TRADITION_ALIASES[rawTarget.trim().toUpperCase()];
+  if (!tradition) return null;
+  const all = [
+    ...feedsValue.diplomat,
+    ...feedsValue.tactical,
+    ...feedsValue.sigint,
+  ].filter(e => e.isDoctrinal && e.tradition === tradition);
+  return all.length ? all[all.length - 1].id : null;
+}
+
 export function canonicalEventId(value) {
   if (value == null) return '';
 

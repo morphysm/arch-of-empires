@@ -118,6 +118,7 @@ export function decode(signalId) {
     probability,
     observerEffectApplied: true,
     content,
+    ...(event?.isDoctrinal ? { isDoctrinal: true } : {}),
     ...(succeeded ? {} : { reason: 'DECODE_FAILED', anomalyFlag: true }),
   };
 }
@@ -186,6 +187,7 @@ export function verify(sourceId) {
     timestamp: get(clock).time,
     probability,
     observerEffectApplied: true,
+    ...(event?.isDoctrinal ? { isDoctrinal: true } : {}),
     ...(anomalyFlag ? { anomalyFlag: true } : {}),
   };
 }

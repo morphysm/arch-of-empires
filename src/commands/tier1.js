@@ -101,7 +101,7 @@ export function intercept(target) {
   spendBandwidth(cost);
   const event = findEvent(target);
   if (!event) return operatorError('INTERCEPT', target, cost);
-  return result('INTERCEPT', event.id, cost, 0, null, { event });
+  return result('INTERCEPT', event.id, cost, 0, null, { event, ...(event.isDoctrinal ? { isDoctrinal: true } : {}) });
 }
 
 export function auth(type, target) {

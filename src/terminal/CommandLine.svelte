@@ -1,12 +1,13 @@
 <script>
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
-  import { feeds, clock, currentShift, commandCount, awareness, coherence, anomalies, nature, gamePaused } from '../core/store.js';
+  import { feeds, clock, currentShift, commandCount, awareness, coherence, anomalies, nature, gamePaused, doctrinalFlash } from '../core/store.js';
   import { intercept, auth, silence, leak } from '../commands/tier1.js';
   import { verify, decode, triangulate }     from '../commands/tier2.js';
   import { pray, obey, transcend, rewriteOrigin, obliterateMemoir, mark, refuse } from '../commands/tier3.js';
   import { checkUnlocks, resolveCommandOnScenarioEvent } from '../scenarios/engine.js';
   import { saveLastCommand } from '../core/persistence.js';
+  import { resolveTraditionTarget } from '../core/eventIds.js';
   import { signalFirstInteraction } from '../audio/soundscape.js';
   import { registerOperatorError } from '../core/operatorError.js';
   import { pauseTimers, resumeTimers } from '../scenarios/campaign.js';
@@ -82,6 +83,19 @@
     return common;
   }
 
+  // ── Target resolution ─────────────────────────────────────────
+
+  // Resolves tradition aliases (e.g. "GITA", "BHAGAVAD GITA", "BIBLE") to
+  // the event ID of the most recent matching doctrinal event in the feeds.
+  // Tries multi-word join first so "BHAGAVAD GITA" works as a single target.
+  function resolveTarget(args) {
+    if (!args.length) return undefined;
+    const joined = args.join(' ');
+    return resolveTraditionTarget(joined, get(feeds))
+        ?? resolveTraditionTarget(args[0], get(feeds))
+        ?? args[0];
+  }
+
   // ── Input handling ────────────────────────────────────────────
 
   function handleKeydown(e) {
@@ -111,13 +125,13 @@
       let result = null;
       try {
         switch (cmd) {
-          case 'INTERCEPT':      result = intercept(args[0]);         break;
+          case 'INTERCEPT':      result = intercept(resolveTarget(args));         break;
           case 'AUTH':           result = auth(args[0], args.slice(1).join(' ')); break;
-          case 'SILENCE':        result = silence(args[0]);           break;
-          case 'LEAK':           result = leak(args[0], args[1]);     break;
-          case 'VERIFY':         result = verify(args[0]);            break;
-          case 'DECODE':         result = decode(args[0]);            break;
-          case 'TRIANGULATE':    result = triangulate(args[0]);       break;
+          case 'SILENCE':        result = silence(args[0]);                       break;
+          case 'LEAK':           result = leak(args[0], args[1]);                 break;
+          case 'VERIFY':         result = verify(resolveTarget(args));            break;
+          case 'DECODE':         result = decode(resolveTarget(args));            break;
+          case 'TRIANGULATE':    result = triangulate(resolveTarget(args));       break;
           case 'PRAY':               result = pray();                 break;
           case 'OBEY':               result = obey();                 break;
           case 'TRANSCEND':          result = transcend();            break;
@@ -136,6 +150,11 @@
       }
 
       appendResult(result);
+
+      if (result?.isDoctrinal && result.reason !== 'BANDWIDTH_EXCEEDED') {
+        doctrinalFlash.set(true);
+        setTimeout(() => doctrinalFlash.set(false), 3500);
+      }
 
       if (result?.target && result.reason !== 'BANDWIDTH_EXCEEDED' &&
           SCENARIO_CMDS.has(result.command)) {

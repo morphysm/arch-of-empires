@@ -8,7 +8,7 @@
     clock, coherence, currentShift, terminalState, terminalMode,
     bandwidth, awareness, nature, feeds, anomalies,
     commandCount, playerLocation, entityMode, entityLines, altarRevealed,
-    gamePaused,
+    gamePaused, doctrinalFlash,
   } from '../core/store.js';
   import { fetchPlayerLocation } from '../core/geolocate.js';
   import { closeEntityChannel } from './entity.js';
@@ -150,6 +150,7 @@
 
   function newRun() {
     gamePaused.set(false);
+    doctrinalFlash.set(false);
     resetCampaignState();
     resetEngineState();
     clock.update(c => ({ ...c, time: '11:54:00', debtLedger: [] }));
@@ -174,6 +175,7 @@
 
   async function resumeFromLastShift() {
     gamePaused.set(false);
+    doctrinalFlash.set(false);
     resetCampaignState();
     resetEngineState();
     clock.update(c => ({ ...c, time: '11:54:00', debtLedger: [] }));
@@ -481,6 +483,14 @@
     ></div>
   {/if}
 
+  <!-- ── Doctrinal flash ───────────────────────────────────────── -->
+  {#if $doctrinalFlash}
+    <div class="doctrinal-flash" aria-live="assertive">
+      <span>YOU DECODED THIS.</span>
+      <span>SOMETHING DECODED YOU.</span>
+    </div>
+  {/if}
+
   <!-- ── Pause menu — z-index 200, above endgame overlay ──────── -->
   {#if menuOpen}
     <div
@@ -570,6 +580,32 @@
     z-index: 150;
     outline: none;
     background: transparent;
+  }
+
+  .doctrinal-flash {
+    position: absolute;
+    inset: 0;
+    z-index: 120;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4em;
+    pointer-events: none;
+    animation: doctrinal-fade 3.5s ease forwards;
+  }
+  .doctrinal-flash span {
+    color: #ff1a1a;
+    font-size: 1.5em;
+    font-weight: bold;
+    letter-spacing: 0.14em;
+    text-shadow: 0 0 24px #ff1a1a, 0 0 8px #ff1a1a;
+  }
+  @keyframes doctrinal-fade {
+    0%   { opacity: 0; }
+    8%   { opacity: 1; }
+    72%  { opacity: 1; }
+    100% { opacity: 0; }
   }
   /* Coherence corrupt — uses header-specific color so it's visible
      against the inverted header background in all three modes */
