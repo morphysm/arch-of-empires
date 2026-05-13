@@ -5,7 +5,7 @@
   import { intercept, auth, silence, leak } from '../commands/tier1.js';
   import { verify, decode, triangulate }     from '../commands/tier2.js';
   import { pray, obey, transcend, rewriteOrigin, obliterateMemoir, mark, refuse } from '../commands/tier3.js';
-  import { checkUnlocks } from '../scenarios/engine.js';
+  import { checkUnlocks, resolveCommandOnScenarioEvent } from '../scenarios/engine.js';
   import { saveLastCommand } from '../core/persistence.js';
   import { signalFirstInteraction } from '../audio/soundscape.js';
   import { registerOperatorError } from '../core/operatorError.js';
@@ -68,6 +68,7 @@
   // ── Tab completion ────────────────────────────────────────────
 
   const COMPLETIONS = ['INTERCEPT', 'AUTH', 'SILENCE', 'LEAK', 'VERIFY', 'DECODE', 'TRIANGULATE'];
+  const SCENARIO_CMDS = new Set(['INTERCEPT', 'VERIFY', 'DECODE', 'TRIANGULATE']);
 
   function tabComplete(input) {
     const upper = input.toUpperCase();
@@ -135,6 +136,15 @@
       }
 
       appendResult(result);
+
+      if (result?.target && result.reason !== 'BANDWIDTH_EXCEEDED' &&
+          SCENARIO_CMDS.has(result.command)) {
+        const resolution = resolveCommandOnScenarioEvent(result.target, result.command);
+        if (resolution?.revelation) {
+          appendSigint('RESOLUTION', resolution.revelation, true);
+        }
+      }
+
       if (result?.success === true) {
         saveLastCommand(rawInput);
         signalFirstInteraction();

@@ -1,7 +1,8 @@
 import { get } from 'svelte/store';
-import { feeds, clock, currentShift } from '../core/store.js';
+import { feeds, clock, currentShift, coherence } from '../core/store.js';
 import { triggerDoctrinal } from '../feeds/doctrinal.js';
 import { saveGhostSignal } from '../core/persistence.js';
+import { canonicalEventId } from '../core/eventIds.js';
 
 // ── Module-level registry ─────────────────────────────────────────────────────
 
@@ -96,6 +97,29 @@ export function resolveLayer(scenarioId, layerName, command, target) {
   }
 
   return { scenarioId, layer: layerName, command, target, ...resolution };
+}
+
+/**
+ * Called after any INTERCEPT / VERIFY / DECODE / TRIANGULATE command.
+ * Finds the matching scenario layer for the given event ID, runs its resolution
+ * function, applies coherenceCost if present, and returns the resolution.
+ * Returns null if the event is not part of any loaded scenario.
+ */
+export function resolveCommandOnScenarioEvent(eventId, command) {
+  const canonical = canonicalEventId(eventId);
+  for (const [scenarioId, scenario] of _scenarios) {
+    for (const layerName of ['surface', 'hidden']) {
+      const layer = scenario.layers[layerName];
+      if (!layer?.event?.id) continue;
+      if (canonicalEventId(layer.event.id) !== canonical) continue;
+      const resolution = resolveLayer(scenarioId, layerName, command, eventId);
+      if (resolution.coherenceCost) {
+        coherence.update(c => Math.max(0, c - resolution.coherenceCost));
+      }
+      return resolution;
+    }
+  }
+  return null;
 }
 
 // Called at Shift end. Unresolved forbidden layers with remembers: true become
