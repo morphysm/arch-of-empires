@@ -2,7 +2,6 @@ import { get } from 'svelte/store';
 import { bandwidth, nature, feeds, clock } from '../core/store.js';
 import { advance } from '../core/clock.js';
 import { triggerDoctrinal } from '../feeds/doctrinal.js';
-import { checkEndgameConditions } from '../endgame/terminalStates.js';
 import { registerOperatorError } from '../core/operatorError.js';
 import { canonicalEventId, joinTargetParts } from '../core/eventIds.js';
 import { isTerminalLocked } from './tier3.js';

@@ -53,17 +53,7 @@
     return 'ACTIVE';
   }
 
-  $: statusMap = Object.fromEntries(
-    REGIONS.map(r => [r.code, regionStatus(r.code, $feeds.tactical)])
-  );
 
-  $: playerRegion = $playerLocation?.region ?? null;
-  $: playerMark   = $playerLocation ? ($playerLocation.isVPN ? 'EVASIVE' : 'TRACKED') : null;
-
-  function displayStatus(code) {
-    if (code === playerRegion && playerMark) return playerMark;
-    return statusMap[code];
-  }
 </script>
 
 <div class="worldmap">
@@ -73,8 +63,12 @@
       {#each row as code}
         <div class="map-cell">
           {#if code}
-            {@const status = displayStatus(code)}
-            {@const region = REGIONS.find(r => r.code === code)}
+            {@const tactical = $feeds.tactical}
+            {@const loc      = $playerLocation}
+            {@const pRegion  = loc?.region ?? null}
+            {@const pMark    = loc ? (loc.isVPN ? 'EVASIVE' : 'TRACKED') : null}
+            {@const raw      = regionStatus(code, tactical)}
+            {@const status   = code === pRegion && pMark ? pMark : raw}
             <span class="region-code" data-status={status}>{code}</span>
             <span class="region-status" data-status={status}>{status}</span>
           {/if}

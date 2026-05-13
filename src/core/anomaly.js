@@ -33,6 +33,7 @@ export function drawAspects() {
 
 export function manifestAnomaly() {
   const { aspects } = get(anomalies);
+  if (aspects.length === 0) return null;
   const aspectId = aspects[Math.floor(Math.random() * aspects.length)];
   const seconds = randomInt(1, 10);
 
