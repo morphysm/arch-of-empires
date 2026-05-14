@@ -4,7 +4,7 @@ import { advance } from '../core/clock.js';
 import { saveClock } from '../core/persistence.js';
 import { triggerDoctrinal } from '../feeds/doctrinal.js';
 import { registerOperatorError } from '../core/operatorError.js';
-import { canonicalEventId } from '../core/eventIds.js';
+import { canonicalEventId, resolveTraditionAlias, resolveTraditionTarget } from '../core/eventIds.js';
 import { isTerminalLocked } from './tier3.js';
 
 const COSTS = {
@@ -50,7 +50,32 @@ function operatorError(command, target, cost, reason = 'TARGET_UNRESOLVED') {
 function findEvent(id) {
   const { diplomat, tactical, sigint } = get(feeds);
   const canonical = canonicalEventId(id);
-  return [...diplomat, ...tactical, ...sigint].find(e => canonicalEventId(e.id) === canonical) ?? null;
+  const direct = [...diplomat, ...tactical, ...sigint].find(e => canonicalEventId(e.id) === canonical) ?? null;
+  if (direct) return direct;
+
+  const tradition = resolveTraditionAlias(id);
+  if (!tradition) return null;
+
+  const starterByTradition = {
+    GITA: 'GITA_LIMBS_FAIL',
+    REVELATION: 'REV_6_1',
+    MORPHYSM: 'MORPHYSM_WAR_TORN_SOIL',
+  };
+
+  const existingId = resolveTraditionTarget(id, get(feeds));
+  if (existingId) {
+    const canonExisting = canonicalEventId(existingId);
+    return [...diplomat, ...tactical, ...sigint].find(e => canonicalEventId(e.id) === canonExisting) ?? null;
+  }
+
+  const bootstrapKey = starterByTradition[tradition];
+  const bootstrapped = bootstrapKey ? triggerDoctrinal(bootstrapKey) : null;
+  if (bootstrapped) return bootstrapped;
+
+  const fallbackId = resolveTraditionTarget(id, get(feeds));
+  if (!fallbackId) return null;
+  const canonFallback = canonicalEventId(fallbackId);
+  return [...diplomat, ...tactical, ...sigint].find(e => canonicalEventId(e.id) === canonFallback) ?? null;
 }
 
 // Observer Effect: mark the event as verified in the store, with optional extra fields.

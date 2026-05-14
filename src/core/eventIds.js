@@ -8,13 +8,18 @@ const TRADITION_ALIASES = {
   'MORPHYSM':       'MORPHYSM',
 };
 
+export function resolveTraditionAlias(rawTarget) {
+  if (rawTarget == null) return null;
+  return TRADITION_ALIASES[String(rawTarget).trim().toUpperCase()] ?? null;
+}
+
 /**
  * If rawTarget matches a tradition name or alias, returns the ID of the most
  * recent doctrinal event with that tradition from the feeds. Returns null if
  * rawTarget is not a tradition alias or no matching event is in the feeds.
  */
 export function resolveTraditionTarget(rawTarget, feedsValue) {
-  const tradition = TRADITION_ALIASES[rawTarget.trim().toUpperCase()];
+  const tradition = resolveTraditionAlias(rawTarget);
   if (!tradition) return null;
   const all = [
     ...feedsValue.diplomat,
@@ -42,4 +47,3 @@ export function canonicalEventId(value) {
 export function joinTargetParts(parts) {
   return parts.filter(part => part != null && String(part).trim() !== '').join(' ');
 }
-

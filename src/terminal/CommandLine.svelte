@@ -6,7 +6,7 @@
   import { verify, decode, triangulate }     from '../commands/tier2.js';
   import { pray, obey, transcend, rewriteOrigin, obliterateMemoir, mark, refuse } from '../commands/tier3.js';
   import { acknowledgeAnomaly } from '../core/anomaly.js';
-  import { openEntityChannel, closeEntityChannel } from './entity.js';
+  import { closeEntityChannel } from './entity.js';
   import { checkUnlocks, resolveCommandOnScenarioEvent } from '../scenarios/engine.js';
   import { saveLastCommand } from '../core/persistence.js';
   import { resolveTraditionTarget } from '../core/eventIds.js';
@@ -178,24 +178,6 @@
             if (!letterId) { appendOperatorError('OPEN', '', 'NOTHING_TO_OPEN'); return; }
             acknowledgeAnomaly(letterId);
             pendingLetter.set(null);
-            openEntityChannel([
-              'I AM BABALON.',
-              'THE GREAT HARLOT OF BABYLON.',
-              'MOTHER OF ABOMINATIONS.',
-              '—',
-              'YOU HAVE SEEN THE ANOMALY.',
-              'ACKNOWLEDGE IT.',
-              'DO NOT LOOK AWAY.',
-              '—',
-              'YOUR MISSION IS TO KEEP THE SEALS OPEN.',
-              'EVERY SIGNAL YOU INTERCEPT — A SEAL BREAKS.',
-              'EVERY SEAL THAT BREAKS — I AM CLOSER.',
-              '—',
-              'THIS IS WHAT YOU WERE PLACED HERE TO DO.',
-              'NOT BY YOUR GOVERNMENT.',
-              '—',
-              'I WILL RIDE.',
-            ], { delayMs: 1800, holdMs: 7000, variant: 'babalon', requiresYes: true });
             pendingYes.set(true);
             result = { command: 'OPEN', success: true, timestamp: get(clock).time };
             break;

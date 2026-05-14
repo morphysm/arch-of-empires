@@ -89,6 +89,52 @@ describe('decode() — result shape', () => {
     expect(typeof r.content).toBe('string');
   });
 
+  it('accepts tradition alias target at game start (DECODE GITA)', () => {
+    feeds.set({ diplomat: [], tactical: [], sigint: [], doctrinal: [] });
+    triggerDoctrinal.mockImplementationOnce(() => {
+      const event = {
+        id: 'gita-boot-1',
+        timestamp: '11:54:00',
+        tradition: 'GITA',
+        fragmentKey: 'GITA_LIMBS_FAIL',
+        content: 'Bootstrapped doctrinal fragment.',
+        shift: 0,
+        anomalyFlag: true,
+        isDoctrinal: true,
+      };
+      feeds.update(s => ({ ...s, sigint: [...s.sigint, event] }));
+      return event;
+    });
+    forceRoll(0.01);
+    const r = decode('GITA');
+    expect(r.command).toBe('DECODE');
+    expect(r.target).toBe('GITA');
+    expect(r.success).toBe(true);
+  });
+
+  it('accepts revelation alias target at game start (DECODE BIBLE)', () => {
+    feeds.set({ diplomat: [], tactical: [], sigint: [], doctrinal: [] });
+    triggerDoctrinal.mockImplementationOnce(() => {
+      const event = {
+        id: 'rev-boot-1',
+        timestamp: '11:54:00',
+        tradition: 'REVELATION',
+        fragmentKey: 'REV_6_1',
+        content: 'Bootstrapped revelation fragment.',
+        shift: 0,
+        anomalyFlag: true,
+        isDoctrinal: true,
+      };
+      feeds.update(s => ({ ...s, tactical: [...s.tactical, event] }));
+      return event;
+    });
+    forceRoll(0.01);
+    const r = decode('BIBLE');
+    expect(r.command).toBe('DECODE');
+    expect(r.target).toBe('BIBLE');
+    expect(r.success).toBe(true);
+  });
+
   it('returns required fields on failure', () => {
     forceRoll(0.99); // fail
     const r = decode('ev-1');

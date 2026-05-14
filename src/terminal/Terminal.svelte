@@ -372,6 +372,7 @@
   let _prevTactical = 0;
   let _prevSigint   = 0;
   let _doctrinalFired = false;
+  let _letterFlowPaused = false;
 
   $: {
     if ($feeds.diplomat.length > _prevDiplomat) {
@@ -400,6 +401,19 @@
       }
       newEvents.filter(e => e.isDoctrinal).forEach(e => speakDoctrinal(e));
       _prevSigint = $feeds.sigint.length;
+    }
+  }
+
+  // Freeze campaign progression while the Babalon letter flow is active.
+  // This holds from letter arrival through OPEN/YES completion.
+  $: {
+    const letterFlowActive = Boolean($pendingLetter || $pendingYes);
+    if (letterFlowActive && !_letterFlowPaused) {
+      pauseTimers();
+      _letterFlowPaused = true;
+    } else if (!letterFlowActive && _letterFlowPaused) {
+      resumeTimers();
+      _letterFlowPaused = false;
     }
   }
 </script>
@@ -475,6 +489,23 @@
 
   </main>
 
+  <!-- ── Babalon's letter — freeze gameplay, keep command prompt visible ── -->
+  {#if $pendingLetter || $pendingYes}
+    <div class="letter-overlay">
+      <div class="letter-body">
+        <div class="letter-seal">✉</div>
+        {#if $pendingLetter}
+          <div class="letter-label">CONFIDENTIAL</div>
+          <div class="letter-hint">TYPE OPEN</div>
+          <BabalonImage />
+        {:else}
+          <div class="letter-label">I AM BABALON.</div>
+          <div class="letter-hint">TYPE YES</div>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
   <!-- ── Strategic overlay map ─────────────────────────────────── -->
   <WorldMap />
 
@@ -526,18 +557,6 @@
         <div class="pause-rule">───────────────────────────</div>
         <div class="pause-note">The terminal does not save your choices.</div>
         <div class="pause-note">It only saves your debts.</div>
-      </div>
-    </div>
-  {/if}
-
-  <!-- ── Babalon's letter — terminal freezes until OPEN is typed ── -->
-  {#if $pendingLetter}
-    <div class="letter-overlay">
-      <div class="letter-body">
-        <div class="letter-seal">✉</div>
-        <div class="letter-label">CONFIDENTIAL</div>
-        <div class="letter-hint">TYPE OPEN</div>
-        <BabalonImage />
       </div>
     </div>
   {/if}
@@ -644,6 +663,7 @@
 
   .feed-stream {
     flex: 1;
+    position: relative;
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
@@ -834,15 +854,15 @@
   /* ── Babalon's letter overlay ──────────────────────────────── */
 
   .letter-overlay {
-    position: fixed;
+    position: absolute;
     inset: 0;
     background: #000000;
-    z-index: 110;
+    z-index: 108;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: 'Courier New', monospace !important;
-    color: #cc0000 !important;
+    color: var(--color-text) !important;
     text-shadow: none !important;
   }
 
@@ -864,15 +884,16 @@
 
   .letter-label {
     font-size: 16px;
-    letter-spacing: 0.5em;
-    color: #cc0000 !important;
-    text-shadow: 0 0 10px #cc0000 !important;
+    letter-spacing: 0.24em;
+    color: var(--color-text) !important;
+    text-shadow: none !important;
+    text-align: center;
   }
 
   .letter-hint {
     font-size: 12px;
     letter-spacing: 0.25em;
-    color: #cc0000 !important;
+    color: var(--color-text) !important;
     text-shadow: none !important;
     margin-top: 1.2em;
     animation: letter-blink 1.4s step-end infinite;
