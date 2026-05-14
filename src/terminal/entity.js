@@ -16,7 +16,7 @@ function clearEntityTimers() {
 // Call from scenarios to open the entity channel.
 // lines: array of strings, each revealed after delayMs from the previous.
 // holdMs: how long the channel stays open after the last line before closing.
-export function openEntityChannel(lines, { delayMs = 2200, holdMs = 5000, variant = 'default' } = {}) {
+export function openEntityChannel(lines, { delayMs = 2200, holdMs = 5000, variant = 'default', requiresYes = false } = {}) {
   clearEntityTimers();
   entityMode.set(true);
   entityLines.set([]);
@@ -30,13 +30,15 @@ export function openEntityChannel(lines, { delayMs = 2200, holdMs = 5000, varian
     _lineTimers.push(id);
   });
 
-  _closeTimer = setTimeout(() => {
-    entityMode.set(false);
-    entityLines.set([]);
-    entityVariant.set('default');
-    exitAltarMode();
-    _closeTimer = null;
-  }, lines.length * delayMs + holdMs);
+  if (!requiresYes) {
+    _closeTimer = setTimeout(() => {
+      entityMode.set(false);
+      entityLines.set([]);
+      entityVariant.set('default');
+      exitAltarMode();
+      _closeTimer = null;
+    }, lines.length * delayMs + holdMs);
+  }
 }
 
 export function closeEntityChannel() {

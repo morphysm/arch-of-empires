@@ -8,7 +8,7 @@
     clock, coherence, currentShift, terminalState, terminalMode,
     bandwidth, awareness, nature, feeds, anomalies,
     commandCount, playerLocation, entityMode, entityLines, entityVariant, altarRevealed,
-    gamePaused, doctrinalFlash, pendingLetter,
+    gamePaused, doctrinalFlash, pendingLetter, pendingYes,
   } from '../core/store.js';
   import { fetchPlayerLocation } from '../core/geolocate.js';
   import { closeEntityChannel } from './entity.js';
@@ -22,6 +22,7 @@
   import { resetLetterState } from '../core/anomaly.js';
   import { resetEngineState } from '../scenarios/engine.js';
   import { loadCurrentShift } from '../core/persistence.js';
+  import BabalonImage from './BabalonImage.svelte';
 
   // ── Per-mode corruption config ─────────────────────────────────
   const CORRUPTION_CONFIG = {
@@ -170,6 +171,7 @@
     closeEntityChannel();
     altarRevealed.set(false);
     pendingLetter.set(null);
+    pendingYes.set(false);
     resetLetterState();
     menuOpen = false;
     resetVoiceForNewRun();
@@ -197,6 +199,7 @@
     closeEntityChannel();
     altarRevealed.set(false);
     pendingLetter.set(null);
+    pendingYes.set(false);
     resetLetterState();
     menuOpen = false;
     resetVoiceForNewRun();
@@ -527,6 +530,7 @@
         <div class="letter-seal">✉</div>
         <div class="letter-label">CONFIDENTIAL</div>
         <div class="letter-hint">TYPE OPEN</div>
+        <BabalonImage />
       </div>
     </div>
   {/if}
@@ -666,7 +670,7 @@
     color: var(--color-statusbar-text, var(--color-highlight-text));
     text-shadow: none;
     position: relative;
-    z-index: 96;
+    z-index: 115;
   }
 
   .status-line {
@@ -826,7 +830,7 @@
     position: fixed;
     inset: 0;
     background: #000000;
-    z-index: 95;
+    z-index: 110;
     display: flex;
     align-items: center;
     justify-content: center;

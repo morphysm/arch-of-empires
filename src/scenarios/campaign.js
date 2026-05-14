@@ -502,7 +502,7 @@ function _cascade8() {
       '—',
       'OR TYPE REFUSE.',
       'AND LET COME WHAT MAY.',
-    ], { delayMs: 2000, holdMs: 6000 });
+    ], { delayMs: 2000, holdMs: 9000 });
   });
 
   schedule(5_000, () => pushEvent('tactical', {

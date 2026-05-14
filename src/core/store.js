@@ -50,6 +50,7 @@ export const pendingLetter = writable(null);
 export const gamePaused = writable(false);
 
 export const doctrinalFlash = writable(false);
+export const pendingYes     = writable(false);
 
 export const currentShift = writable(0);
 

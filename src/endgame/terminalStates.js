@@ -107,7 +107,7 @@ function isAssimilation() {
 
 function isGreatReset() {
   const n = get(nature);
-  if (n.martyr === 0) return false;
+  if (n.martyr < 5) return false;
   if (dominantNature(n) !== 'martyr') return false;
   const f = get(feeds);
   return [...f.diplomat, ...f.tactical, ...f.sigint].some(

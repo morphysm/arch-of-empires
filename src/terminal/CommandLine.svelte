@@ -1,12 +1,12 @@
 <script>
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
-  import { feeds, clock, currentShift, commandCount, awareness, coherence, anomalies, nature, gamePaused, doctrinalFlash, pendingLetter } from '../core/store.js';
+  import { feeds, clock, currentShift, commandCount, awareness, coherence, anomalies, nature, gamePaused, doctrinalFlash, pendingLetter, pendingYes } from '../core/store.js';
   import { intercept, auth, silence, leak } from '../commands/tier1.js';
   import { verify, decode, triangulate }     from '../commands/tier2.js';
   import { pray, obey, transcend, rewriteOrigin, obliterateMemoir, mark, refuse } from '../commands/tier3.js';
   import { acknowledgeAnomaly } from '../core/anomaly.js';
-  import { openEntityChannel } from './entity.js';
+  import { openEntityChannel, closeEntityChannel } from './entity.js';
   import { checkUnlocks, resolveCommandOnScenarioEvent } from '../scenarios/engine.js';
   import { saveLastCommand } from '../core/persistence.js';
   import { resolveTraditionTarget } from '../core/eventIds.js';
@@ -49,7 +49,8 @@
       return;
     }
 
-    const content    = result.command + ': ' + (result.success ? 'OK' : (result.reason || 'FAILED'));
+    const failText = result.reason === 'DECODE_FAILED' ? 'FAILED' : (result.reason || 'FAILED');
+    const content    = result.command + ': ' + (result.success ? 'OK' : failText);
     const anomalyFlag = result.anomalyFlag === true || result.success === false;
     appendSigint('SYSTEM', content, anomalyFlag);
   }
@@ -119,6 +120,9 @@
       // Letter pending — all commands frozen until OPEN is typed
       if (get(pendingLetter) && cmd !== 'OPEN') return;
 
+      // Babalon message active — all commands frozen until YES is typed
+      if (get(pendingYes) && cmd !== 'YES') return;
+
       if (cmd === 'PAUSE') {
         const nowPaused = !get(gamePaused);
         gamePaused.set(nowPaused);
@@ -159,8 +163,16 @@
               'NOT BY YOUR GOVERNMENT.',
               '—',
               'I WILL RIDE.',
-            ], { delayMs: 1800, holdMs: 7000, variant: 'babalon' });
+            ], { delayMs: 1800, holdMs: 7000, variant: 'babalon', requiresYes: true });
+            pendingYes.set(true);
             result = { command: 'OPEN', success: true, timestamp: get(clock).time };
+            break;
+          }
+          case 'YES': {
+            if (!get(pendingYes)) return;
+            pendingYes.set(false);
+            closeEntityChannel();
+            result = { command: 'YES', success: true, timestamp: get(clock).time };
             break;
           }
           case 'PRAY':               result = pray();                 break;
@@ -182,7 +194,10 @@
 
       appendResult(result);
 
-      if (result?.isDoctrinal && result?.success === true && result.reason !== 'BANDWIDTH_EXCEEDED') {
+      if (result?.command === 'DECODE' &&
+          result?.isDoctrinal &&
+          result?.success === true &&
+          result?.reason !== 'BANDWIDTH_EXCEEDED') {
         doctrinalFlash.set(true);
         setTimeout(() => doctrinalFlash.set(false), 3500);
       }
