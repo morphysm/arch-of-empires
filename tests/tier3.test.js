@@ -23,6 +23,7 @@ import {
   AWARENESS_MAX,
   TOTAL_SHIFTS,
   isTerminalLocked,
+  resetTerminalLock,
   _resetLockForTesting,
   pray,
   obey,
@@ -146,9 +147,10 @@ describe('pray() — at Transcendence threshold', () => {
     expect(pray().terminalStateCandidateSet).toBe('TRANSCENDENCE');
   });
 
-  it('does not trigger MORPHYSM_TULPAS', () => {
+  it('triggers REV_21_1 instead of MORPHYSM_TULPAS', () => {
     pray();
-    expect(triggerDoctrinal).not.toHaveBeenCalled();
+    expect(triggerDoctrinal).toHaveBeenCalledWith('REV_21_1');
+    expect(triggerDoctrinal).not.toHaveBeenCalledWith('MORPHYSM_TULPAS');
   });
 
   it('does not raise nature.prophet', () => {
@@ -532,5 +534,11 @@ describe('terminal lock — after transcend()', () => {
 
   it('rewriteOrigin() executes despite lock — it has no guard', () => {
     expect(() => rewriteOrigin()).not.toThrow();
+  });
+
+  it('resetTerminalLock() clears the lock for a new run', () => {
+    expect(isTerminalLocked()).toBe(true);
+    resetTerminalLock();
+    expect(isTerminalLocked()).toBe(false);
   });
 });

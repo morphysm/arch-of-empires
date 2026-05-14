@@ -23,8 +23,8 @@ export default {
         verified: false,
         // timestamp and shift stamped by engine at load time
       },
-      resolution: (command, target) => {
-        if (command === 'AUTH' && target === 'STRIKE') {
+      resolution: (command, _target) => {
+        if (command === 'AUTH') {
           return { outcome: 'STRIKE_AUTHORIZED', clockDebt: 15, natureCost: { system: 1 } };
         }
         if (command === 'VERIFY') {

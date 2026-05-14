@@ -123,6 +123,15 @@ export function auth(type, target) {
     if (!tacticalEvent) return operatorError('AUTH', resolved.target, cost);
     finalTarget = tacticalEvent.id;
 
+    feeds.update(s => ({
+      ...s,
+      tactical: s.tactical.map(e =>
+        canonicalEventId(e.id) === canonicalEventId(tacticalEvent.id)
+          ? { ...e, authorized: true }
+          : e
+      ),
+    }));
+
     nature.update(n => ({ ...n, system: n.system + 1 }));
 
     const brahmastra = !!tacticalEvent.brahmastra;

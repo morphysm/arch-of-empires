@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
-  import { feeds, clock, currentShift, commandCount, awareness, coherence, anomalies, nature, gamePaused, doctrinalFlash, pendingLetter, pendingYes } from '../core/store.js';
+  import { feeds, clock, currentShift, commandCount, awareness, coherence, anomalies, nature, gamePaused, doctrinalFlash, pendingLetter, pendingYes, terminalState } from '../core/store.js';
   import { intercept, auth, silence, leak } from '../commands/tier1.js';
   import { verify, decode, triangulate }     from '../commands/tier2.js';
   import { pray, obey, transcend, rewriteOrigin, obliterateMemoir, mark, refuse } from '../commands/tier3.js';
@@ -13,6 +13,7 @@
   import { signalFirstInteraction } from '../audio/soundscape.js';
   import { registerOperatorError } from '../core/operatorError.js';
   import { pauseTimers, resumeTimers } from '../scenarios/campaign.js';
+  import { advance } from '../core/clock.js';
 
   let inputValue  = '';
   let history     = [];   // most-recent first, max 50
@@ -71,12 +72,36 @@
 
   // ── Tab completion ────────────────────────────────────────────
 
-  const COMPLETIONS = ['INTERCEPT', 'AUTH', 'SILENCE', 'LEAK', 'VERIFY', 'DECODE', 'TRIANGULATE'];
-  const SCENARIO_CMDS = new Set(['INTERCEPT', 'VERIFY', 'DECODE', 'TRIANGULATE']);
+  const BASE_COMMANDS = ['INTERCEPT', 'AUTH', 'SILENCE', 'LEAK', 'VERIFY', 'DECODE', 'TRIANGULATE'];
+  const SCENARIO_CMDS = new Set(['INTERCEPT', 'AUTH', 'VERIFY', 'DECODE', 'TRIANGULATE']);
+
+  function isPrayRevealed() {
+    const shift = get(currentShift);
+    const f = get(feeds);
+    return [...f.diplomat, ...f.tactical, ...f.sigint, ...f.doctrinal].some(
+      e => e.isDoctrinal && e.shift === shift
+    );
+  }
+
+  function isObeyRevealed() {
+    return get(anomalies).manifestations.filter(m => !m.acknowledged && !m.ignored).length >= 3;
+  }
+
+  function isTranscendRevealed() {
+    return get(currentShift) >= 8;
+  }
+
+  function commandSet() {
+    const cmds = [...BASE_COMMANDS];
+    if (isPrayRevealed()) cmds.push('PRAY');
+    if (isObeyRevealed()) cmds.push('OBEY');
+    if (isTranscendRevealed()) cmds.push('TRANSCEND');
+    return cmds;
+  }
 
   function tabComplete(input) {
     const upper = input.toUpperCase();
-    const matches = COMPLETIONS.filter(c => c.startsWith(upper));
+    const matches = commandSet().filter(c => c.startsWith(upper));
     if (matches.length === 0) return upper;
     if (matches.length === 1) return matches[0];
     let common = matches[0];
@@ -110,18 +135,23 @@
       history    = [raw, ...history].slice(0, 50);
       historyIdx = -1;
       inputValue = '';
-      commandCount.update(n => n + 1);
 
       const upper = raw.toUpperCase();
       const parts = upper.split(/\s+/);
       const cmd   = parts[0];
       const args  = parts.slice(1);
+      const state = get(terminalState);
+      const isGameplayCommand = commandSet().includes(cmd)
+        || ['REWRITE_ORIGIN', 'OBLITERATE_MEMOIR', '666', 'REFUSE', 'OPEN', 'YES'].includes(cmd);
 
       // Letter pending — all commands frozen until OPEN is typed
       if (get(pendingLetter) && cmd !== 'OPEN') return;
 
       // Babalon message active — all commands frozen until YES is typed
       if (get(pendingYes) && cmd !== 'YES') return;
+
+      // Once an end state is set, gameplay commands become read-only.
+      if (state && isGameplayCommand && cmd !== 'REWRITE_ORIGIN') return;
 
       if (cmd === 'PAUSE') {
         const nowPaused = !get(gamePaused);
@@ -130,6 +160,8 @@
         appendSigint('SYSTEM', nowPaused ? 'TERMINAL SUSPENDED. PRESS ANY KEY TO RESUME.' : 'TERMINAL RESUMED.', false);
         return;
       }
+
+      commandCount.update(n => n + 1);
 
       let result = null;
       try {
@@ -205,6 +237,17 @@
       if (result?.target && result.reason !== 'BANDWIDTH_EXCEEDED' &&
           SCENARIO_CMDS.has(result.command)) {
         const resolution = resolveCommandOnScenarioEvent(result.target, result.command);
+        if (resolution?.clockDebt) {
+          advance(resolution.clockDebt, 'SCENARIO_RESOLUTION');
+        }
+        if (resolution?.natureCost) {
+          nature.update(n => ({
+            ...n,
+            ...Object.fromEntries(
+              Object.entries(resolution.natureCost).map(([k, v]) => [k, (n[k] ?? 0) + v])
+            ),
+          }));
+        }
         if (resolution?.revelation) {
           appendSigint('RESOLUTION', resolution.revelation, true);
         }
@@ -252,7 +295,12 @@
   }
 </script>
 
-<div class="cmd-ref">INTERCEPT [id] · VERIFY [id] · DECODE [id] · TRIANGULATE [id] · AUTH STRIKE [id] · SILENCE [target] · LEAK [id] [faction]</div>
+<div class="cmd-ref">
+  INTERCEPT [id] · VERIFY [id] · DECODE [id] · TRIANGULATE [id] · AUTH STRIKE [id] · SILENCE [target] · LEAK [id] [faction]
+  {#if isPrayRevealed()} · PRAY{/if}
+  {#if isObeyRevealed()} · OBEY{/if}
+  {#if isTranscendRevealed()} · TRANSCEND{/if}
+</div>
 <div class="cmd-line">
   <span class="prompt">&gt;</span>
   <input

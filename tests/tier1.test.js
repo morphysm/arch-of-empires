@@ -171,6 +171,12 @@ describe('auth() — STRIKE', () => {
     expect(get(nature).system).toBe(1);
   });
 
+  it('marks the tactical event as authorized', () => {
+    auth('STRIKE', 'target');
+    const ev = get(feeds).tactical.find(e => e.id === 'target');
+    expect(ev.authorized).toBe(true);
+  });
+
   it('does not advance clock', () => {
     auth('STRIKE', 'target');
     expect(advance).not.toHaveBeenCalled();

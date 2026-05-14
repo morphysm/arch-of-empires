@@ -21,7 +21,8 @@
   import { startShift, resetCampaignState, pauseTimers, resumeTimers } from '../scenarios/campaign.js';
   import { resetLetterState } from '../core/anomaly.js';
   import { resetEngineState } from '../scenarios/engine.js';
-  import { loadCurrentShift } from '../core/persistence.js';
+  import { loadClock, loadCurrentShift } from '../core/persistence.js';
+  import { resetTerminalLock } from '../commands/tier3.js';
   import BabalonImage from './BabalonImage.svelte';
 
   // ── Per-mode corruption config ─────────────────────────────────
@@ -151,6 +152,7 @@
   let pauseEl;
 
   function newRun() {
+    resetTerminalLock();
     gamePaused.set(false);
     doctrinalFlash.set(false);
     resetCampaignState();
@@ -179,11 +181,13 @@
   }
 
   async function resumeFromLastShift() {
+    resetTerminalLock();
     gamePaused.set(false);
     doctrinalFlash.set(false);
     resetCampaignState();
     resetEngineState();
-    clock.update(c => ({ ...c, time: '11:54:00', debtLedger: [] }));
+    const savedClock = await loadClock();
+    clock.set(savedClock ?? { time: '11:54:00', debtLedger: [] });
     feeds.set({ diplomat: [], tactical: [], sigint: [], doctrinal: [] });
     awareness.set(0);
     nature.set({ system: 0, prophet: 0, antichrist: 0, martyr: 0 });
@@ -257,6 +261,9 @@
   }
 
   onMount(async () => {
+    resetTerminalLock();
+    const savedClock = await loadClock();
+    clock.set(savedClock ?? { time: '11:54:00', debtLedger: [] });
     const savedShift = await loadCurrentShift();
     startShift(savedShift ?? 1);
 

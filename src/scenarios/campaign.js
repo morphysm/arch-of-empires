@@ -1,13 +1,14 @@
 import { get } from 'svelte/store';
 import {
-  clock, bandwidth, feeds, currentShift, coherence,
+  clock, bandwidth, feeds, currentShift, coherence, awareness, anomalies,
   terminalMode, terminalState, nature, commandCount,
 } from '../core/store.js';
 import { advance }                            from '../core/clock.js';
 import { drawAspects, manifestAnomaly }       from '../core/anomaly.js';
 import { triggerDoctrinal, resetShiftTracking } from '../feeds/doctrinal.js';
 import { loadGhostSignals, loadLastCommand, saveCurrentShift } from '../core/persistence.js';
-import { loadScenario, endShift as engineEndShift } from '../scenarios/engine.js';
+import { loadScenario, endShift as engineEndShift, checkUnlocks } from '../scenarios/engine.js';
+import { loadGhosts } from '../feeds/sigint.js';
 import { checkEndgameConditions, resolveTerminalState } from '../endgame/terminalStates.js';
 import { speakBreachAnnouncement, speakPsalm234, startVoiceCountdown } from '../audio/soundscape.js';
 import { openEntityChannel } from '../terminal/entity.js';
@@ -71,6 +72,14 @@ function pushEvent(feedName, partial) {
   }));
 
   trackUnansweredEvent(rest.type);
+  checkUnlocks({
+    feeds:     get(feeds),
+    clock:     get(clock),
+    awareness: get(awareness),
+    coherence: get(coherence),
+    anomalies: get(anomalies),
+    nature:    get(nature),
+  });
 }
 
 function trackUnansweredEvent(eventType) {
@@ -416,20 +425,7 @@ function _cascade6() {
     });
 
     // Ghost signals from previous runs surface after the silence
-    loadGhostSignals().then(ghosts => {
-      ghosts.forEach(ghost => {
-        feeds.update(s => ({
-          ...s,
-          sigint: [...s.sigint, {
-            ...ghost,
-            id:        crypto.randomUUID(),
-            timestamp: get(clock).time,
-            isGhost:   true,
-            shift:     get(currentShift),
-          }],
-        }));
-      });
-    });
+    loadGhosts();
   });
 
   schedule(120_000, () => triggerBreach(6));

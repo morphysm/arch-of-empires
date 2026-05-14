@@ -22,6 +22,10 @@ export function _resetLockForTesting() {
   _locked = false;
 }
 
+export function resetTerminalLock() {
+  _locked = false;
+}
+
 // ── Reveal condition guards ───────────────────────────────────────────────────
 
 function assertUnlocked() {
@@ -67,6 +71,8 @@ export function pray() {
   if (atThreshold) {
     // Transcendence threshold reached — the operator exits the terminal
     terminalState.set('TRANSCENDENCE');
+    triggerDoctrinal('REV_21_1');
+    _locked = true;
   } else {
     // Below threshold — WyrmOS absorbs the prayer; the machine grows
     doctrinalTriggered = 'MORPHYSM_TULPAS';
