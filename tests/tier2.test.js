@@ -80,7 +80,7 @@ describe('decode() — result shape', () => {
       target: 'ev-1',
       success: true,
       bandwidthCost: 1,
-      clockEffect: 10,
+      clockEffect: 0,
       doctrinalTriggered: null,
       timestamp: '11:54:00',
       observerEffectApplied: true,
@@ -144,13 +144,13 @@ describe('decode() — result shape', () => {
     expect(r.anomalyFlag).toBe(true);
   });
 
-  it('clockEffect is always 10', () => {
+  it('clockEffect is always 0', () => {
     forceRoll(0.01);
-    expect(decode('ev-1').clockEffect).toBe(10);
+    expect(decode('ev-1').clockEffect).toBe(0);
     vi.restoreAllMocks();
     forceRoll(0.99);
     bandwidth.set({ total: 100, spent: 0 });
-    expect(decode('ev-1').clockEffect).toBe(10);
+    expect(decode('ev-1').clockEffect).toBe(0);
   });
 });
 
@@ -226,10 +226,10 @@ describe('decode() — content', () => {
     expect(content).toContain('[PARTIAL DECODE — SIGNAL CORRUPTED]');
   });
 
-  it('advances clock by 10 unconditionally', () => {
+  it('does not advance clock', () => {
     forceRoll(0.5);
     decode('ev-1');
-    expect(advance).toHaveBeenCalledWith(10, 'DECODE_ATTEMPT');
+    expect(advance).not.toHaveBeenCalledWith(10, 'DECODE_ATTEMPT');
   });
 });
 
@@ -301,10 +301,10 @@ describe('verify() — Observer Effect', () => {
     expect(get(feeds).sigint[0].verified).toBe(true);
   });
 
-  it('advances clock by 30 unconditionally', () => {
+  it('does not advance base clock cost', () => {
     forceRoll(0.5);
     verify('ev-1');
-    expect(advance).toHaveBeenCalledWith(30, 'VERIFY_ATTEMPT');
+    expect(advance).not.toHaveBeenCalledWith(30, 'VERIFY_ATTEMPT');
   });
 });
 
@@ -346,10 +346,10 @@ describe('verify() — false positive (ghost signal, roll passes)', () => {
     expect(verify('ev-1').anomalyFlag).toBe(true);
   });
 
-  it('clockEffect includes the +3 penalty', () => {
+  it('clockEffect is +3 for false positive', () => {
     seedFeed(makeSigintEvent({ isGhost: true }));
     forceRoll(0.01);
-    expect(verify('ev-1').clockEffect).toBe(33);
+    expect(verify('ev-1').clockEffect).toBe(3);
   });
 });
 
@@ -373,13 +373,11 @@ describe('verify() — false negative (real signal, roll fails)', () => {
     expect(verify('ev-1').success).toBe(false);
   });
 
-  it('does not advance clock beyond base 30', () => {
+  it('does not advance clock', () => {
     seedFeed(makeSigintEvent({ isGhost: false }));
     forceRoll(0.99);
     verify('ev-1');
-    // Should be called once with 30 only
-    expect(advance).toHaveBeenCalledOnce();
-    expect(advance).toHaveBeenCalledWith(30, 'VERIFY_ATTEMPT');
+    expect(advance).not.toHaveBeenCalled();
   });
 });
 
@@ -391,11 +389,11 @@ describe('verify() — true negative (ghost signal, roll fails)', () => {
     expect(triggerDoctrinal).not.toHaveBeenCalled();
   });
 
-  it('does not advance clock beyond base 30', () => {
+  it('does not advance clock', () => {
     seedFeed(makeSigintEvent({ isGhost: true }));
     forceRoll(0.99);
     verify('ev-1');
-    expect(advance).toHaveBeenCalledOnce();
+    expect(advance).not.toHaveBeenCalled();
   });
 });
 
@@ -410,7 +408,7 @@ describe('triangulate() — shape', () => {
       target: 'target-1',
       success: expect.any(Boolean),
       bandwidthCost: 3,
-      clockEffect: 20,
+      clockEffect: 0,
       doctrinalTriggered: null,
       probability: 0.50,
       observerEffectApplied: false,
@@ -431,10 +429,10 @@ describe('triangulate() — shape', () => {
     expect(saveClock).not.toHaveBeenCalled();
   });
 
-  it('advances clock by 20 unconditionally', () => {
+  it('does not advance clock', () => {
     forceRoll(0.5);
     triangulate('t');
-    expect(advance).toHaveBeenCalledWith(20, 'TRIANGULATE');
+    expect(advance).not.toHaveBeenCalled();
   });
 });
 

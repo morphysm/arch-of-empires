@@ -118,9 +118,6 @@ export function decode(signalId) {
 
   const succeeded = Math.random() < probability;
 
-  // Clock cost is unconditional — the attempt itself takes time
-  advance(10, 'DECODE_ATTEMPT');
-
   // Observer Effect: the signal is now real regardless of decode outcome
   markVerified(signalId, succeeded ? {} : { anomalyFlag: true });
 
@@ -137,7 +134,7 @@ export function decode(signalId) {
     target: String(signalId),
     success: succeeded,
     bandwidthCost: cost,
-    clockEffect: 10,
+    clockEffect: 0,
     doctrinalTriggered: null,
     timestamp: get(clock).time,
     probability,
@@ -174,9 +171,6 @@ export function verify(sourceId) {
 
   const succeeded = Math.random() < probability;
 
-  // Clock cost is unconditional
-  advance(30, 'VERIFY_ATTEMPT');
-
   // Observer Effect: the signal is now real regardless of verify outcome
   markVerified(sourceId);
 
@@ -207,7 +201,7 @@ export function verify(sourceId) {
     target: String(sourceId),
     success: succeeded,
     bandwidthCost: cost,
-    clockEffect: 30 + secondaryClockEffect,
+    clockEffect: secondaryClockEffect,
     doctrinalTriggered,
     timestamp: get(clock).time,
     probability,
@@ -225,8 +219,6 @@ export function triangulate(targetId) {
 
   const event = findEvent(targetId);
   if (!event) return operatorError('TRIANGULATE', targetId, cost);
-
-  advance(20, 'TRIANGULATE');
 
   const aspects = get(anomalies).aspects;
   const hasArchitect = aspects.includes('THE_ARCHITECT');
@@ -260,7 +252,7 @@ export function triangulate(targetId) {
     target: String(targetId),
     success: succeeded,
     bandwidthCost: cost,
-    clockEffect: 20,
+    clockEffect: 0,
     doctrinalTriggered: null,
     timestamp: get(clock).time,
     probability,

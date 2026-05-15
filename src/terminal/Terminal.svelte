@@ -1148,9 +1148,10 @@
 
   .detonate-wrapper {
     position: fixed;
-    inset: 0;
+    bottom: 7vh;
+    left: 0;
+    right: 0;
     display: flex;
-    align-items: center;
     justify-content: center;
     z-index: 110;
     pointer-events: none;
