@@ -432,12 +432,13 @@
     }
   }
 
-  // After MIDNIGHT locks the terminal, arm the DETONATE button after 7 seconds.
-  $: if ($terminalState === 'MIDNIGHT' && !_detonateTimer && !detonateReady && !detonating) {
+  // Arm DETONATE 30s into shift 10 while the countdown is running.
+  // Stays visible through MIDNIGHT. Hidden if any other end state resolves first.
+  $: if ($currentShift === 10 && !_detonateTimer && !detonateReady && !detonating) {
     _detonateTimer = setTimeout(() => {
       detonateReady  = true;
       _detonateTimer = null;
-    }, 7000);
+    }, 30000);
   }
 </script>
 
@@ -669,7 +670,7 @@
   {/if}
 
   <!-- ── DETONATE — armed 7s after any terminal state is set ──── -->
-  {#if detonateReady && !detonating}
+  {#if detonateReady && !detonating && (!$terminalState || $terminalState === 'MIDNIGHT')}
     <div class="detonate-wrapper">
       <button class="detonate-btn" on:click={triggerDetonation}>
         DETONATE
