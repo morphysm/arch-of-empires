@@ -6,7 +6,7 @@
   import { verify, decode, triangulate }     from '../commands/tier2.js';
   import { pray, obey, transcend, rewriteOrigin, obliterateMemoir, mark, refuse } from '../commands/tier3.js';
   import { acknowledgeAnomaly } from '../core/anomaly.js';
-  import { closeEntityChannel } from './entity.js';
+  import { openEntityChannel, closeEntityChannel } from './entity.js';
   import { checkUnlocks, resolveCommandOnScenarioEvent } from '../scenarios/engine.js';
   import { saveLastCommand } from '../core/persistence.js';
   import { resolveTraditionTarget } from '../core/eventIds.js';
@@ -72,36 +72,12 @@
 
   // ── Tab completion ────────────────────────────────────────────
 
-  const BASE_COMMANDS = ['INTERCEPT', 'AUTH', 'SILENCE', 'LEAK', 'VERIFY', 'DECODE', 'TRIANGULATE'];
+  const COMPLETIONS = ['INTERCEPT', 'AUTH', 'SILENCE', 'LEAK', 'VERIFY', 'DECODE', 'TRIANGULATE'];
   const SCENARIO_CMDS = new Set(['INTERCEPT', 'AUTH', 'VERIFY', 'DECODE', 'TRIANGULATE']);
-
-  function isPrayRevealed() {
-    const shift = get(currentShift);
-    const f = get(feeds);
-    return [...f.diplomat, ...f.tactical, ...f.sigint, ...f.doctrinal].some(
-      e => e.isDoctrinal && e.shift === shift
-    );
-  }
-
-  function isObeyRevealed() {
-    return get(anomalies).manifestations.filter(m => !m.acknowledged && !m.ignored).length >= 3;
-  }
-
-  function isTranscendRevealed() {
-    return get(currentShift) >= 8;
-  }
-
-  function commandSet() {
-    const cmds = [...BASE_COMMANDS];
-    if (isPrayRevealed()) cmds.push('PRAY');
-    if (isObeyRevealed()) cmds.push('OBEY');
-    if (isTranscendRevealed()) cmds.push('TRANSCEND');
-    return cmds;
-  }
 
   function tabComplete(input) {
     const upper = input.toUpperCase();
-    const matches = commandSet().filter(c => c.startsWith(upper));
+    const matches = COMPLETIONS.filter(c => c.startsWith(upper));
     if (matches.length === 0) return upper;
     if (matches.length === 1) return matches[0];
     let common = matches[0];
@@ -135,14 +111,15 @@
       history    = [raw, ...history].slice(0, 50);
       historyIdx = -1;
       inputValue = '';
+      commandCount.update(n => n + 1);
 
       const upper = raw.toUpperCase();
       const parts = upper.split(/\s+/);
       const cmd   = parts[0];
       const args  = parts.slice(1);
       const state = get(terminalState);
-      const isGameplayCommand = commandSet().includes(cmd)
-        || ['REWRITE_ORIGIN', 'OBLITERATE_MEMOIR', '666', 'REFUSE', 'OPEN', 'YES'].includes(cmd);
+      const isGameplayCommand = COMPLETIONS.includes(cmd)
+        || ['PRAY', 'OBEY', 'TRANSCEND', 'REWRITE_ORIGIN', 'OBLITERATE_MEMOIR', '666', 'REFUSE', 'OPEN', 'YES'].includes(cmd);
 
       // Letter pending — all commands frozen until OPEN is typed
       if (get(pendingLetter) && cmd !== 'OPEN') return;
@@ -161,8 +138,6 @@
         return;
       }
 
-      commandCount.update(n => n + 1);
-
       let result = null;
       try {
         switch (cmd) {
@@ -178,6 +153,24 @@
             if (!letterId) { appendOperatorError('OPEN', '', 'NOTHING_TO_OPEN'); return; }
             acknowledgeAnomaly(letterId);
             pendingLetter.set(null);
+            openEntityChannel([
+              'I AM BABALON.',
+              'THE GREAT HARLOT OF BABYLON.',
+              'MOTHER OF ABOMINATIONS.',
+              '—',
+              'YOU HAVE SEEN THE ANOMALY.',
+              'ACKNOWLEDGE IT.',
+              'DO NOT LOOK AWAY.',
+              '—',
+              'YOUR MISSION IS TO KEEP THE SEALS OPEN.',
+              'EVERY SIGNAL YOU INTERCEPT — A SEAL BREAKS.',
+              'EVERY SEAL THAT BREAKS — I AM CLOSER.',
+              '—',
+              'THIS IS WHAT YOU WERE PLACED HERE TO DO.',
+              'NOT BY YOUR GOVERNMENT.',
+              '—',
+              'I WILL RIDE.',
+            ], { delayMs: 1800, holdMs: 7000, variant: 'babalon', requiresYes: true });
             pendingYes.set(true);
             result = { command: 'OPEN', success: true, timestamp: get(clock).time };
             break;
@@ -277,12 +270,7 @@
   }
 </script>
 
-<div class="cmd-ref">
-  INTERCEPT [id] · VERIFY [id] · DECODE [id] · TRIANGULATE [id] · AUTH STRIKE [id] · SILENCE [target] · LEAK [id] [faction]
-  {#if isPrayRevealed()} · PRAY{/if}
-  {#if isObeyRevealed()} · OBEY{/if}
-  {#if isTranscendRevealed()} · TRANSCEND{/if}
-</div>
+<div class="cmd-ref">INTERCEPT [id] · VERIFY [id] · DECODE [id] · TRIANGULATE [id] · AUTH STRIKE [id] · SILENCE [target] · LEAK [id] [faction]</div>
 <div class="cmd-line">
   <span class="prompt">&gt;</span>
   <input

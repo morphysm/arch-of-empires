@@ -21,9 +21,10 @@
   import { startShift, resetCampaignState, pauseTimers, resumeTimers } from '../scenarios/campaign.js';
   import { resetLetterState } from '../core/anomaly.js';
   import { resetEngineState } from '../scenarios/engine.js';
-  import { loadClock, loadCurrentShift } from '../core/persistence.js';
+  import { loadCurrentShift } from '../core/persistence.js';
   import { resetTerminalLock } from '../commands/tier3.js';
   import BabalonImage from './BabalonImage.svelte';
+  import beastImage from '../assets/beast_end-final.png';
 
   // ── Per-mode corruption config ─────────────────────────────────
   const CORRUPTION_CONFIG = {
@@ -147,12 +148,26 @@
     }
   }
 
+  // ── Detonation sequence ───────────────────────────────────────
+  let detonateReady = false;
+  let detonating    = false;
+  let _detonateTimer = null;
+
+  function triggerDetonation() {
+    detonateReady = false;
+    detonating    = true;
+    setTimeout(() => { detonating = false; }, 10200);
+  }
+
   // ── Pause menu ────────────────────────────────────────────────
   let menuOpen = false;
   let pauseEl;
 
   function newRun() {
     resetTerminalLock();
+    if (_detonateTimer) { clearTimeout(_detonateTimer); _detonateTimer = null; }
+    detonateReady = false;
+    detonating    = false;
     gamePaused.set(false);
     doctrinalFlash.set(false);
     resetCampaignState();
@@ -182,12 +197,14 @@
 
   async function resumeFromLastShift() {
     resetTerminalLock();
+    if (_detonateTimer) { clearTimeout(_detonateTimer); _detonateTimer = null; }
+    detonateReady = false;
+    detonating    = false;
     gamePaused.set(false);
     doctrinalFlash.set(false);
     resetCampaignState();
     resetEngineState();
-    const savedClock = await loadClock();
-    clock.set(savedClock ?? { time: '11:54:00', debtLedger: [] });
+    clock.update(c => ({ ...c, time: '11:54:00', debtLedger: [] }));
     feeds.set({ diplomat: [], tactical: [], sigint: [], doctrinal: [] });
     awareness.set(0);
     nature.set({ system: 0, prophet: 0, antichrist: 0, martyr: 0 });
@@ -262,8 +279,6 @@
 
   onMount(async () => {
     resetTerminalLock();
-    const savedClock = await loadClock();
-    clock.set(savedClock ?? { time: '11:54:00', debtLedger: [] });
     const savedShift = await loadCurrentShift();
     startShift(savedShift ?? 1);
 
@@ -416,6 +431,14 @@
       _letterFlowPaused = false;
     }
   }
+
+  // After MIDNIGHT locks the terminal, arm the DETONATE button after 7 seconds.
+  $: if ($terminalState === 'MIDNIGHT' && !_detonateTimer && !detonateReady && !detonating) {
+    _detonateTimer = setTimeout(() => {
+      detonateReady  = true;
+      _detonateTimer = null;
+    }, 7000);
+  }
 </script>
 
 <svelte:window on:keydown={handleGlobalKeydown} />
@@ -489,19 +512,14 @@
 
   </main>
 
-  <!-- ── Babalon's letter — freeze gameplay, keep command prompt visible ── -->
-  {#if $pendingLetter || $pendingYes}
+  <!-- ── Babalon's letter — terminal freezes until OPEN is typed ── -->
+  {#if $pendingLetter}
     <div class="letter-overlay">
       <div class="letter-body">
         <div class="letter-seal">✉</div>
-        {#if $pendingLetter}
-          <div class="letter-label">CONFIDENTIAL</div>
-          <div class="letter-hint">TYPE OPEN</div>
-          <BabalonImage />
-        {:else}
-          <div class="letter-label">I AM BABALON.</div>
-          <div class="letter-hint">TYPE YES</div>
-        {/if}
+        <div class="letter-label">CONFIDENTIAL</div>
+        <div class="letter-hint">TYPE OPEN</div>
+        <BabalonImage />
       </div>
     </div>
   {/if}
@@ -545,19 +563,95 @@
       tabindex="-1"
       on:keydown={handleMenuKeydown}
     >
-      <div class="pause-content">
-        <div class="pause-title">ARCH OF EMPIRES</div>
-        <div class="pause-rule">───────────────────────────</div>
-        <div class="pause-item">[R] RESUME</div>
-        <div class="pause-item">[N] NEW RUN</div>
-        <div class="pause-item">[Q] QUIT TO DESKTOP</div>
-        <div class="pause-rule">───────────────────────────</div>
-        <div class="pause-note">Type PAUSE to suspend the terminal.</div>
-        <div class="pause-note">Press any key to resume.</div>
-        <div class="pause-rule">───────────────────────────</div>
-        <div class="pause-note">The terminal does not save your choices.</div>
-        <div class="pause-note">It only saves your debts.</div>
-      </div>
+      <div class="ref-panel">
+
+        <div class="ref-header">
+          <span class="ref-title">ARCH OF EMPIRES</span>
+          <span class="ref-subtitle">TERMINAL REFERENCE — ESC TO CLOSE</span>
+        </div>
+        <div class="ref-divider"></div>
+
+        <div class="ref-grid">
+
+          <!-- ── Col 1: Navigation ───────────────────────────── -->
+          <div class="ref-col">
+            <div class="ref-col-head">NAVIGATION</div>
+            <div class="ref-nav">[R] RESUME</div>
+            <div class="ref-nav">[N] NEW RUN</div>
+            <div class="ref-nav">[Q] QUIT</div>
+            <div class="ref-spacer"></div>
+            <div class="ref-dim">Type PAUSE to suspend timers.</div>
+            <div class="ref-dim">Clock does not reset between shifts.</div>
+            <div class="ref-dim">The terminal only saves your debts.</div>
+          </div>
+
+          <!-- ── Col 2: Commands ─────────────────────────────── -->
+          <div class="ref-col">
+            <div class="ref-col-head">COMMANDS</div>
+
+            <div class="ref-tier">TIER 1 — BANDWIDTH</div>
+            <div class="ref-cmd"><span class="ref-cmd-name">INTERCEPT [id]</span><span class="ref-cmd-cost">2 BW</span><span class="ref-cmd-desc">tag and log signal</span></div>
+            <div class="ref-cmd"><span class="ref-cmd-name">AUTH STRIKE [id]</span><span class="ref-cmd-cost">10 BW</span><span class="ref-cmd-desc">authorize strike on TACTICAL event</span></div>
+            <div class="ref-cmd"><span class="ref-cmd-name">AUTH TREATY [id]</span><span class="ref-cmd-cost">5 BW</span><span class="ref-cmd-desc">authorize treaty on DIPLOMAT event</span></div>
+            <div class="ref-cmd"><span class="ref-cmd-name">SILENCE [target]</span><span class="ref-cmd-cost">1 BW</span><span class="ref-cmd-desc">silence a target · try OWN_TERMINAL</span></div>
+            <div class="ref-cmd"><span class="ref-cmd-name">LEAK [id] [faction]</span><span class="ref-cmd-cost">4 BW</span><span class="ref-cmd-desc">leak signal to named faction</span></div>
+
+            <div class="ref-spacer"></div>
+            <div class="ref-tier">TIER 2 — CLOCK</div>
+            <div class="ref-cmd"><span class="ref-cmd-name">VERIFY [id]</span><span class="ref-cmd-cost">15 BW · −30s</span><span class="ref-cmd-desc">confirm signal origin (60% base)</span></div>
+            <div class="ref-cmd"><span class="ref-cmd-name">DECODE [id]</span><span class="ref-cmd-cost">5 BW · −10s</span><span class="ref-cmd-desc">read signal content (70% base)</span></div>
+            <div class="ref-cmd"><span class="ref-cmd-name">TRIANGULATE [id]</span><span class="ref-cmd-cost">10 BW · −20s</span><span class="ref-cmd-desc">locate signal origin (50% flat)</span></div>
+
+            <div class="ref-spacer"></div>
+            <div class="ref-tier">TIER 3 — HIDDEN</div>
+            <div class="ref-cmd"><span class="ref-cmd-name">PRAY</span><span class="ref-cmd-cost ref-unlock">after doctrinal event in shift</span><span class="ref-cmd-desc">+5 awareness · WyrmOS absorbs it</span></div>
+            <div class="ref-cmd"><span class="ref-cmd-name">OBEY</span><span class="ref-cmd-cost ref-unlock">3+ unacknowledged manifestations</span><span class="ref-cmd-desc">dismiss manifestations · −10s · +antichrist</span></div>
+            <div class="ref-cmd"><span class="ref-cmd-name">TRANSCEND</span><span class="ref-cmd-cost ref-unlock">shifts 8–10 · awareness ≥ 100</span><span class="ref-cmd-desc">exits terminal · locks all commands</span></div>
+            <div class="ref-cmd"><span class="ref-cmd-name">OBLITERATE_MEMOIR</span><span class="ref-cmd-cost ref-unlock">always (undocumented)</span><span class="ref-cmd-desc">erase this shift's clock debt record</span></div>
+            <div class="ref-cmd"><span class="ref-cmd-name">REWRITE_ORIGIN</span><span class="ref-cmd-cost ref-unlock">always (never listed)</span><span class="ref-cmd-desc">zeros everything · triggers THE LOOP</span></div>
+
+            <div class="ref-spacer"></div>
+            <div class="ref-tier">ALTAR — late game</div>
+            <div class="ref-cmd"><span class="ref-cmd-name">666</span><span class="ref-cmd-cost ref-unlock">after altar reveals</span><span class="ref-cmd-desc">accept the mark</span></div>
+            <div class="ref-cmd"><span class="ref-cmd-name">REFUSE</span><span class="ref-cmd-cost ref-unlock">after altar reveals</span><span class="ref-cmd-desc">refuse the mark</span></div>
+          </div>
+
+          <!-- ── Col 3: Endgame states ───────────────────────── -->
+          <div class="ref-col">
+            <div class="ref-col-head">ENDGAME STATES</div>
+
+            <div class="ref-state">
+              <div class="ref-state-name">MIDNIGHT</div>
+              <div class="ref-state-desc">Clock reaches 12:00:00. Nature scores determine the variant: system-dominant → NUCLEAR · antichrist-dominant → SILENT · prophet or martyr dominant → HOLY.</div>
+            </div>
+            <div class="ref-state">
+              <div class="ref-state-name">TRANSCENDENCE</div>
+              <div class="ref-state-desc">PRAY with awareness ≥ 100 in shifts 8–10, or type TRANSCEND directly. You exit the terminal. The world continues without you.</div>
+            </div>
+            <div class="ref-state">
+              <div class="ref-state-name">ASSIMILATION</div>
+              <div class="ref-state-desc">system nature ≥ 8, system is dominant, and no anomaly was ever acknowledged. Your credentials transfer to the next operator. You become the advisory AI.</div>
+            </div>
+            <div class="ref-state">
+              <div class="ref-state-name">THE GREAT RESET</div>
+              <div class="ref-state-desc">martyr ≥ 5, martyr dominant, and GITA_PRETENDER doctrinal appeared — triggered by SILENCE OWN_TERMINAL. The clock freezes. The system holds.</div>
+            </div>
+            <div class="ref-state">
+              <div class="ref-state-name">THE MARKED</div>
+              <div class="ref-state-desc">Type 666 after the altar is revealed.</div>
+            </div>
+            <div class="ref-state">
+              <div class="ref-state-name">THE REFUSED</div>
+              <div class="ref-state-desc">Type REFUSE after the altar is revealed. No new era. Just a recoil into fire.</div>
+            </div>
+            <div class="ref-state">
+              <div class="ref-state-name">THE LOOP</div>
+              <div class="ref-state-desc">REWRITE_ORIGIN. Bandwidth, nature scores, and awareness zero. All feeds clear. Shift resets to 0. Ghost signals survive — they are not yours to erase.</div>
+            </div>
+          </div>
+
+        </div><!-- /ref-grid -->
+      </div><!-- /ref-panel -->
     </div>
   {/if}
 
@@ -571,6 +665,22 @@
           <div class="overlay-line">{line}</div>
         {/each}
       </div>
+    </div>
+  {/if}
+
+  <!-- ── DETONATE — armed 7s after any terminal state is set ──── -->
+  {#if detonateReady && !detonating}
+    <div class="detonate-wrapper">
+      <button class="detonate-btn" on:click={triggerDetonation}>
+        DETONATE
+      </button>
+    </div>
+  {/if}
+
+  <!-- ── Detonation sequence ──────────────────────────────────── -->
+  {#if detonating}
+    <div class="detonate-overlay">
+      <img src={beastImage} alt="" class="beast-image" />
     </div>
   {/if}
 
@@ -712,46 +822,147 @@
   .pause-menu {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(0, 0, 0, 0.92);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 200;
-    outline: none; /* suppress focus ring on the container */
+    outline: none;
+    padding: 2vh 2vw;
   }
 
-  .pause-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.75em;
-    font-family: var(--font-primary);
-    font-size: var(--font-size);
-    color: var(--color-text);
-    text-align: center;
-  }
-
-  .pause-title {
-    font-size: 18px;
-    letter-spacing: 0.2em;
-    font-weight: bold;
-    margin-bottom: 0.25em;
-  }
-
-  .pause-rule {
-    color: var(--color-text-dim);
-    letter-spacing: 0;
-  }
-
-  .pause-item {
-    letter-spacing: 0.12em;
-  }
-
-  .pause-note {
-    color: var(--color-text-dim);
+  .ref-panel {
+    width: min(96vw, 1280px);
+    max-height: 92vh;
+    overflow-y: auto;
+    background: #000;
+    border: 1px solid var(--color-border);
+    padding: 1.4rem 2rem 1.8rem;
+    font-family: 'Courier New', monospace;
     font-size: 11px;
+    color: var(--color-text);
+    letter-spacing: 0.03em;
+  }
+
+  .ref-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.6rem;
+  }
+
+  .ref-title {
+    font-size: 15px;
+    letter-spacing: 0.22em;
+    font-weight: bold;
+    color: var(--color-text);
+  }
+
+  .ref-subtitle {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--color-text-dim);
+    opacity: 0.6;
+  }
+
+  .ref-divider {
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 1.2rem;
+  }
+
+  .ref-grid {
+    display: grid;
+    grid-template-columns: 13rem 1fr 1fr;
+    gap: 2.4rem;
+    align-items: start;
+  }
+
+  .ref-col-head {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--color-text-dim);
+    opacity: 0.55;
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .ref-nav {
+    letter-spacing: 0.1em;
+    line-height: 2.2;
+    color: var(--color-text);
+  }
+
+  .ref-spacer {
+    height: 0.8rem;
+  }
+
+  .ref-dim {
+    font-size: 10px;
+    color: var(--color-text-dim);
+    opacity: 0.45;
+    line-height: 1.9;
     letter-spacing: 0.04em;
-    line-height: 1.6;
+  }
+
+  .ref-tier {
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: var(--color-text-dim);
+    opacity: 0.5;
+    margin-bottom: 0.3rem;
+    margin-top: 0.1rem;
+    text-transform: uppercase;
+  }
+
+  .ref-cmd {
+    display: grid;
+    grid-template-columns: 13rem 9rem 1fr;
+    gap: 0.5rem;
+    line-height: 1.85;
+    align-items: baseline;
+  }
+
+  .ref-cmd-name {
+    color: var(--color-text);
+    font-weight: bold;
+  }
+
+  .ref-cmd-cost {
+    color: var(--color-text-dim);
+    opacity: 0.7;
+    font-size: 10px;
+  }
+
+  .ref-unlock {
+    color: var(--color-text-corrupt, #cc4444);
+    opacity: 0.75;
+    font-style: italic;
+  }
+
+  .ref-cmd-desc {
+    color: var(--color-text-dim);
+    opacity: 0.65;
+    font-size: 10px;
+  }
+
+  .ref-state {
+    margin-bottom: 0.9rem;
+  }
+
+  .ref-state-name {
+    color: var(--color-text-corrupt, #cc4444);
+    letter-spacing: 0.1em;
+    font-weight: bold;
+    margin-bottom: 0.2rem;
+  }
+
+  .ref-state-desc {
+    color: var(--color-text-dim);
+    opacity: 0.7;
+    font-size: 10px;
+    line-height: 1.7;
+    letter-spacing: 0.03em;
   }
 
   /* ── Terminal state overlay ─────────────────────────────────── */
@@ -931,5 +1142,95 @@
   :global(.mode-nmcc .overlay-line) {
     font-size: 16px;
     letter-spacing: 0.12em;
+  }
+
+  /* ── DETONATE button ────────────────────────────────────────── */
+
+  .detonate-wrapper {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 110;
+    pointer-events: none;
+  }
+
+  .detonate-btn {
+    pointer-events: all;
+    background: none;
+    border: 2px solid #cc0000;
+    color: #cc0000 !important;
+    font-family: 'Courier New', monospace;
+    font-size: 18px;
+    letter-spacing: 0.5em;
+    padding: 0.7em 2.4em;
+    cursor: pointer;
+    outline: none;
+    text-shadow: 0 0 10px #cc0000 !important;
+    box-shadow: 0 0 18px #cc0000, 0 0 40px #880000;
+    animation: detonate-pulse 1.8s ease-in-out infinite;
+  }
+
+  @keyframes detonate-pulse {
+    0%, 100% {
+      box-shadow: 0 0 18px #cc0000, 0 0 40px #880000;
+      border-color: #cc0000;
+    }
+    50% {
+      box-shadow: 0 0 28px #ff2200, 0 0 60px #cc0000, 0 0 90px #660000;
+      border-color: #ff2200;
+    }
+  }
+
+  /* ── Detonation sequence ────────────────────────────────────── */
+
+  .detonate-overlay {
+    position: fixed;
+    inset: 0;
+    background: #000000;
+    z-index: 250;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: detonate-bg 10s forwards;
+  }
+
+  @keyframes detonate-bg {
+    0%   { opacity: 1; }
+    86%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  .beast-image {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    animation: beast-strobe 10s forwards;
+  }
+
+  /* 4×2 strobe: 4 pairs of 2 quick flashes, then hold, then slow fade */
+  @keyframes beast-strobe {
+    0%    { opacity: 0; }
+    2%    { opacity: 1; }
+    4%    { opacity: 0; }
+    6%    { opacity: 1; }
+    9%    { opacity: 0; }
+    11%   { opacity: 1; }
+    13%   { opacity: 0; }
+    15%   { opacity: 1; }
+    18%   { opacity: 0; }
+    20%   { opacity: 1; }
+    22%   { opacity: 0; }
+    24%   { opacity: 1; }
+    27%   { opacity: 0; }
+    29%   { opacity: 1; }
+    31%   { opacity: 0; }
+    33%   { opacity: 1; }
+    38%   { opacity: 0; }
+    43%   { opacity: 1; }
+    68%   { opacity: 1; }
+    98%   { opacity: 0; }
+    100%  { opacity: 0; }
   }
 </style>
