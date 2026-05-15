@@ -303,6 +303,19 @@
       }
     });
 
+    // Arm DETONATE 12s after shift 10 starts.
+    // Uses subscribe() not $: — store.set() inside setTimeout doesn't reliably
+    // trigger $: blocks in Svelte 5.
+    const unsubShift10 = currentShift.subscribe(shift => {
+      if (shift === 10 && !_detonateTimer && !detonateReady && !detonating) {
+        _detonateTimer = setTimeout(() => {
+          detonateReady  = true;
+          _detonateTimer = null;
+        }, 12_000);
+      }
+    });
+    return () => { unsubShift10(); };
+
     const enterFullscreen = async () => {
       await initSoundscape();
       startConnectionSequence();
@@ -432,14 +445,6 @@
     }
   }
 
-  // Arm DETONATE 30s into shift 10 while the countdown is running.
-  // Stays visible through MIDNIGHT. Hidden if any other end state resolves first.
-  $: if ($currentShift === 10 && !_detonateTimer && !detonateReady && !detonating) {
-    _detonateTimer = setTimeout(() => {
-      detonateReady  = true;
-      _detonateTimer = null;
-    }, 30000);
-  }
 </script>
 
 <svelte:window on:keydown={handleGlobalKeydown} />

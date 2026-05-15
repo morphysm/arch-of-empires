@@ -97,7 +97,7 @@ function trackUnansweredEvent(eventType) {
   if (_unansweredEventCount >= 3) {
     _unansweredEventCount = 0;
     _inactivityBlocks += 1;
-    advance(120, 'PLAYER_INACTION');
+    advance(20, 'PLAYER_INACTION');
     if (_inactivityBlocks >= 2) {
       _inactivityBlocks = 0;
       advance(43200, 'PLAYER_INACTION');

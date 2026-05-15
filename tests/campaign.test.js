@@ -240,7 +240,7 @@ describe('runCascade(1) — unanswered event clock pressure', () => {
     runCascade(1);
     runCascade(2);
     vi.advanceTimersByTime(20_001);
-    expect(advance).toHaveBeenCalledWith(120, 'PLAYER_INACTION');
+    expect(advance).toHaveBeenCalledWith(20, 'PLAYER_INACTION');
   });
 
   it('resets the unanswered event count when the player enters a command', () => {
@@ -248,12 +248,12 @@ describe('runCascade(1) — unanswered event clock pressure', () => {
     vi.advanceTimersByTime(15_001);
     commandCount.set(1);
     vi.advanceTimersByTime(15_000);
-    expect(advance).not.toHaveBeenCalledWith(120, 'PLAYER_INACTION');
+    expect(advance).not.toHaveBeenCalledWith(20, 'PLAYER_INACTION');
   });
 
   it('does not count shift briefing events as ignored player events', async () => {
     await startShift(1);
-    expect(advance).not.toHaveBeenCalledWith(120, 'PLAYER_INACTION');
+    expect(advance).not.toHaveBeenCalledWith(20, 'PLAYER_INACTION');
   });
 });
 
