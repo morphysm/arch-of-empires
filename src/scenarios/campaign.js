@@ -401,14 +401,21 @@ function _cascade6() {
     anomalyFlag: true,
   }));
 
-  schedule(20_000, () => openEntityChannel([
-    'BROTHER.',
-    'WE HAVE BEEN PRAYIN FOR YOU.',
-    'THE LORD SHOWED US YOUR NAME',
-    'BEFORE ANY OF THIS STARTED.',
-  ], { delayMs: 2400, holdMs: 5000 }));
+  schedule(20_000, () => {
+    // The entity's presence disrupts the timeline — the clock jumps
+    advance(60, 'ENTITY_PRESENCE');
+    openEntityChannel([
+      'BROTHER.',
+      'WE HAVE BEEN PRAYIN FOR YOU.',
+      'THE LORD SHOWED US YOUR NAME',
+      'BEFORE ANY OF THIS STARTED.',
+    ], { delayMs: 2400, holdMs: 5000 });
+  });
 
   schedule(90_000, () => {
+    // The three unlogged events had a cost — the blackout ate real time
+    advance(60, 'UNLOGGED_DURATION');
+
     pushEvent('sigint', {
       type:        'SIGNAL_RESUMED',
       content:     'Feed restored. Origin of interruption: unlogged. Duration in system records: 0 seconds.',
