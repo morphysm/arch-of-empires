@@ -314,7 +314,6 @@
         }, 12_000);
       }
     });
-    return () => { unsubShift10(); };
 
     const enterFullscreen = async () => {
       await initSoundscape();
@@ -323,6 +322,11 @@
       document.removeEventListener('click', enterFullscreen);
     };
     document.addEventListener('click', enterFullscreen);
+
+    return () => {
+      unsubShift10();
+      document.removeEventListener('click', enterFullscreen);
+    };
   });
 
   onDestroy(() => {
