@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy, tick } from 'svelte';
-  import { get } from 'svelte/store';
+  import { get, writable } from 'svelte/store';
   import FeedPane     from './FeedPane.svelte';
   import CommandLine  from './CommandLine.svelte';
   import WorldMap     from './WorldMap.svelte';
@@ -149,14 +149,17 @@
   }
 
   // ── Detonation sequence ───────────────────────────────────────
-  let detonateReady = false;
-  let detonating    = false;
-  let _detonateTimer = null;
+  // Writable stores — .set() triggers template $store re-renders from any async
+  // context (setTimeout inside subscribe callbacks). Plain let assignments don't
+  // reach the Svelte 5 reactive graph when called from outside the component.
+  const detonateReady = writable(false);
+  const detonating    = writable(false);
+  let _detonateTimer  = null;
 
   function triggerDetonation() {
-    detonateReady = false;
-    detonating    = true;
-    setTimeout(() => { detonating = false; }, 10200);
+    detonateReady.set(false);
+    detonating.set(true);
+    setTimeout(() => { detonating.set(false); }, 10200);
   }
 
   // ── Pause menu ────────────────────────────────────────────────
@@ -166,8 +169,8 @@
   function newRun() {
     resetTerminalLock();
     if (_detonateTimer) { clearTimeout(_detonateTimer); _detonateTimer = null; }
-    detonateReady = false;
-    detonating    = false;
+    detonateReady.set(false);
+    detonating.set(false);
     gamePaused.set(false);
     doctrinalFlash.set(false);
     resetCampaignState();
@@ -198,8 +201,8 @@
   async function resumeFromLastShift() {
     resetTerminalLock();
     if (_detonateTimer) { clearTimeout(_detonateTimer); _detonateTimer = null; }
-    detonateReady = false;
-    detonating    = false;
+    detonateReady.set(false);
+    detonating.set(false);
     gamePaused.set(false);
     doctrinalFlash.set(false);
     resetCampaignState();
@@ -227,8 +230,8 @@
     const savedShift = await loadCurrentShift();
     startShift(savedShift ?? 1);
     // currentShift was already 10 — writable skips notification, so re-arm manually
-    if ((savedShift ?? 1) === 10 && !_detonateTimer && !detonateReady && !detonating) {
-      _detonateTimer = setTimeout(() => { detonateReady = true; _detonateTimer = null; }, 12_000);
+    if ((savedShift ?? 1) === 10 && !_detonateTimer && !get(detonateReady) && !get(detonating)) {
+      _detonateTimer = setTimeout(() => { detonateReady.set(true); _detonateTimer = null; }, 12_000);
     }
   }
 
@@ -311,9 +314,9 @@
     // Uses subscribe() not $: — store.set() inside setTimeout doesn't reliably
     // trigger $: blocks in Svelte 5.
     const unsubShift10 = currentShift.subscribe(shift => {
-      if (shift === 10 && !_detonateTimer && !detonateReady && !detonating) {
+      if (shift === 10 && !_detonateTimer && !get(detonateReady) && !get(detonating)) {
         _detonateTimer = setTimeout(() => {
-          detonateReady  = true;
+          detonateReady.set(true);
           _detonateTimer = null;
         }, 12_000);
       }
@@ -693,8 +696,8 @@
     </div>
   {/if}
 
-  <!-- ── DETONATE — armed 7s after any terminal state is set ──── -->
-  {#if detonateReady && !detonating && (!$terminalState || $terminalState === 'MIDNIGHT')}
+  <!-- ── DETONATE — armed 12s into shift 10 countdown ────────── -->
+  {#if $detonateReady && !$detonating && (!$terminalState || $terminalState === 'MIDNIGHT')}
     <div class="detonate-wrapper">
       <button class="detonate-btn" on:click={triggerDetonation}>
         DETONATE
@@ -703,7 +706,7 @@
   {/if}
 
   <!-- ── Detonation sequence ──────────────────────────────────── -->
-  {#if detonating}
+  {#if $detonating}
     <div class="detonate-overlay">
       <img src={beastImage} alt="" class="beast-image" />
     </div>

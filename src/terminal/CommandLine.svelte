@@ -201,10 +201,16 @@
 
       appendResult(result);
 
+      // When a doctrinal decode succeeds, surface the text inline in SIGINT.
+      // The fragment is already in its target feed but is easy to miss;
+      // echoing it here puts it adjacent to the command that caused it.
       if (result?.command === 'DECODE' &&
           result?.isDoctrinal &&
           result?.success === true &&
           result?.reason !== 'BANDWIDTH_EXCEEDED') {
+        if (result.content) {
+          appendSigint('DOCTRINAL', result.content, true);
+        }
         doctrinalFlash.set(true);
         setTimeout(() => doctrinalFlash.set(false), 3500);
       }
