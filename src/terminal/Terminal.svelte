@@ -8,7 +8,7 @@
     clock, coherence, currentShift, terminalState, terminalMode,
     bandwidth, awareness, nature, feeds, anomalies,
     commandCount, playerLocation, entityMode, entityLines, entityVariant, altarRevealed,
-    gamePaused, doctrinalFlash, pendingLetter, pendingYes,
+    gamePaused, doctrinalFlash, creepingDeathFlash, pendingLetter, pendingYes,
   } from '../core/store.js';
   import { fetchPlayerLocation } from '../core/geolocate.js';
   import { closeEntityChannel } from './entity.js';
@@ -226,6 +226,10 @@
     resetVoiceForNewRun();
     const savedShift = await loadCurrentShift();
     startShift(savedShift ?? 1);
+    // currentShift was already 10 — writable skips notification, so re-arm manually
+    if ((savedShift ?? 1) === 10 && !_detonateTimer && !detonateReady && !detonating) {
+      _detonateTimer = setTimeout(() => { detonateReady = true; _detonateTimer = null; }, 12_000);
+    }
   }
 
   function openMenu() {
@@ -565,6 +569,17 @@
     </div>
   {/if}
 
+  <!-- ── Shift 10 — Creeping Death flash ───────────────────────── -->
+  {#if $creepingDeathFlash}
+    <div class="creeping-death-flash" aria-live="assertive">
+      <span>So let it be written, so let it be done</span>
+      <span>I'm sent here by the chosen one</span>
+      <span>So let it be written, so let it be done</span>
+      <span>To kill the first-born Pharaoh son</span>
+      <span>I'm creeping death</span>
+    </div>
+  {/if}
+
   <!-- ── Pause menu — z-index 200, above endgame overlay ──────── -->
   {#if menuOpen}
     <div
@@ -775,6 +790,42 @@
     72%  { opacity: 1; }
     100% { opacity: 0; }
   }
+
+  .creeping-death-flash {
+    position: absolute;
+    inset: 0;
+    z-index: 120;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55em;
+    pointer-events: none;
+    animation: creeping-blink 12s step-end forwards;
+  }
+  .creeping-death-flash span {
+    color: #ff1a1a;
+    font-size: 1.15em;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 28px #ff1a1a, 0 0 10px #ff1a1a;
+    text-transform: none;
+  }
+  /* 3 sharp blink cycles, then hold, then cut */
+  @keyframes creeping-blink {
+    0%   { opacity: 1; }
+    16%  { opacity: 1; }
+    17%  { opacity: 0; }
+    33%  { opacity: 0; }
+    34%  { opacity: 1; }
+    50%  { opacity: 1; }
+    51%  { opacity: 0; }
+    67%  { opacity: 0; }
+    68%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
   /* Coherence corrupt — uses header-specific color so it's visible
      against the inverted header background in all three modes */
   .corrupt { color: var(--color-header-corrupt, var(--color-text-corrupt)); }

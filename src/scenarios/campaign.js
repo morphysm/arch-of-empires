@@ -12,7 +12,7 @@ import { loadGhosts } from '../feeds/sigint.js';
 import { checkEndgameConditions, resolveTerminalState } from '../endgame/terminalStates.js';
 import { speakBreachAnnouncement, speakPsalm234, startVoiceCountdown } from '../audio/soundscape.js';
 import { openEntityChannel } from '../terminal/entity.js';
-import { altarRevealed } from '../core/store.js';
+import { altarRevealed, creepingDeathFlash } from '../core/store.js';
 import { resetOperatorErrors } from '../core/operatorError.js';
 
 // ── Module state ───────────────────────────────────────────────────────────
@@ -226,8 +226,13 @@ export async function startShift(shiftNum) {
 
   if (shiftNum === 3) drawAspects();
 
-  // Shift 10: breach fires after 60 real seconds — no cascade event timers
+  // Shift 10: Creeping Death flash → Gita → breach
   if (shiftNum === 10) {
+    creepingDeathFlash.set(true);
+    schedule(12_000, () => {
+      creepingDeathFlash.set(false);
+      triggerDoctrinal('GITA_TIME_I_AM');
+    });
     schedule(60_000, () => triggerBreach(10));
     startVoiceCountdown();
   }
