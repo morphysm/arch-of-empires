@@ -18,7 +18,7 @@
     setVoiceMode, speakTacticalEvent, speakDoctrinal, updateVoiceCoherence, speakTerminalStateResolution,
     startConnectionSequence, resetVoiceForNewRun, playMarkMelody,
   } from '../audio/soundscape.js';
-  import { startShift, resetCampaignState, pauseTimers, resumeTimers } from '../scenarios/campaign.js';
+  import { startShift, resetCampaignState, pauseTimers, resumeTimers, notifyDetonationTriggered, onDetonationComplete } from '../scenarios/campaign.js';
   import { resetLetterState } from '../core/anomaly.js';
   import { resetEngineState } from '../scenarios/engine.js';
   import { loadCurrentShift } from '../core/persistence.js';
@@ -157,9 +157,13 @@
   let _detonateTimer  = null;
 
   function triggerDetonation() {
+    notifyDetonationTriggered();
     detonateReady.set(false);
     detonating.set(true);
-    setTimeout(() => { detonating.set(false); }, 10200);
+    setTimeout(() => {
+      detonating.set(false);
+      onDetonationComplete();
+    }, 10200);
   }
 
   // ── Pause menu ────────────────────────────────────────────────

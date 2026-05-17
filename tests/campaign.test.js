@@ -41,7 +41,7 @@ import { openEntityChannel }                 from '../src/terminal/entity.js';
 
 import {
   startShift, runCascade, triggerBreach, startHaunting,
-  getLastEndgame,
+  getLastEndgame, notifyDetonationTriggered, onDetonationComplete,
   _resetCampaignForTesting,
   _getCascadeTimerCount,
 } from '../src/scenarios/campaign.js';
@@ -323,20 +323,36 @@ describe('runCascade(9) — entity reaction to refused mark', () => {
   });
 });
 
-// ── Shift 10 CASCADE — no automatic timer ─────────────────────────────────
+// ── Shift 10 CASCADE ──────────────────────────────────────────────────────
 
-describe('Shift 10 CASCADE — no automatic event timers', () => {
-  it('runCascade(10) adds no timers to the cascade timer list', () => {
+describe('Shift 10 CASCADE', () => {
+  it('runCascade(10) schedules 2 timed events', () => {
     runCascade(10);
-    expect(_getCascadeTimerCount()).toBe(0);
+    expect(_getCascadeTimerCount()).toBe(2);
   });
 
-  it('runCascade(10) fires no feed events even after a long wait', () => {
+  it('fires TACTICAL IMPACT_INBOUND after 5s', () => {
     runCascade(10);
-    vi.advanceTimersByTime(999_999);
-    expect(get(feeds).diplomat).toHaveLength(0);
-    expect(get(feeds).tactical).toHaveLength(0);
-    expect(get(feeds).sigint).toHaveLength(0);
+    vi.advanceTimersByTime(5_001);
+    const tactical = get(feeds).tactical;
+    expect(tactical).toHaveLength(1);
+    expect(tactical[0].type).toBe('IMPACT_INBOUND');
+    expect(tactical[0].anomalyFlag).toBe(true);
+  });
+
+  it('fires DIPLOMAT CHANNELS_DARK after 25s', () => {
+    runCascade(10);
+    vi.advanceTimersByTime(25_001);
+    const diplomat = get(feeds).diplomat;
+    expect(diplomat).toHaveLength(1);
+    expect(diplomat[0].type).toBe('CHANNELS_DARK');
+  });
+
+  it('both events fired after 30s', () => {
+    runCascade(10);
+    vi.advanceTimersByTime(30_000);
+    expect(get(feeds).tactical).toHaveLength(1);
+    expect(get(feeds).diplomat).toHaveLength(1);
   });
 });
 
@@ -464,6 +480,47 @@ describe('Shift 10 breach — resolveTerminalState fires', () => {
     await startShift(10);
     vi.advanceTimersByTime(60_001);
     expect(resolveTerminalState).toHaveBeenCalled();
+  });
+
+  it('does NOT advance clock when detonation was triggered before breach', () => {
+    notifyDetonationTriggered();
+    triggerBreach(10);
+    expect(advance).not.toHaveBeenCalledWith(600, 'FINAL_RECKONING');
+  });
+
+  it('does NOT call resolveTerminalState at breach when detonation was triggered', () => {
+    notifyDetonationTriggered();
+    triggerBreach(10);
+    expect(resolveTerminalState).not.toHaveBeenCalled();
+  });
+});
+
+// ── onDetonationComplete() ────────────────────────────────────────────────
+
+describe('onDetonationComplete()', () => {
+  it('calls advance(600, FINAL_RECKONING) when no terminal state set', () => {
+    terminalState.set(null);
+    onDetonationComplete();
+    expect(advance).toHaveBeenCalledWith(600, 'FINAL_RECKONING');
+  });
+
+  it('does not call advance when terminal state already set', () => {
+    terminalState.set('TRANSCENDENCE');
+    onDetonationComplete();
+    expect(advance).not.toHaveBeenCalledWith(600, 'FINAL_RECKONING');
+  });
+
+  it('calls resolveTerminalState and stores result in getLastEndgame()', () => {
+    const mockScreen = { state: 'MIDNIGHT', variant: 'NUCLEAR', heading: 'MIDNIGHT', body: [] };
+    resolveTerminalState.mockReturnValue(mockScreen);
+    onDetonationComplete();
+    expect(resolveTerminalState).toHaveBeenCalled();
+    expect(getLastEndgame()).toEqual(mockScreen);
+  });
+
+  it('calls checkEndgameConditions', () => {
+    onDetonationComplete();
+    expect(checkEndgameConditions).toHaveBeenCalled();
   });
 });
 

@@ -26,6 +26,7 @@ let _unansweredEventCount = 0;
 let _inactivityBlocks = 0;
 let _gitaLimbsFired = false;
 let _timersPaused  = false;
+let _detonationTriggered = false;
 
 export function resetCampaignState() {
   _cascadeTimers.forEach(t => clearTimeout(t.id));
@@ -38,6 +39,7 @@ export function resetCampaignState() {
   _inactivityBlocks = 0;
   _gitaLimbsFired = false;
   _timersPaused   = false;
+  _detonationTriggered = false;
   resetOperatorErrors();
 }
 
@@ -49,6 +51,21 @@ export function _getCascadeTimerCount() {
 
 export function getLastEndgame() {
   return _lastEndgame;
+}
+
+// Called by Terminal when the DETONATE button is clicked.
+export function notifyDetonationTriggered() {
+  _detonationTriggered = true;
+}
+
+// Called by Terminal after the 10.2s detonation sequence completes.
+// Resolves the endgame state that was deferred while the player experienced DETONATE.
+export function onDetonationComplete() {
+  checkEndgameConditions();
+  if (!get(terminalState)) {
+    advance(600, 'FINAL_RECKONING');
+  }
+  _lastEndgame = resolveTerminalState(get(terminalState), get(nature));
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -251,7 +268,7 @@ export function runCascade(shiftNum) {
     case 7:  _cascade7(); break;
     case 8:  _cascade8(); break;
     case 9:  _cascade9(); break;
-    case 10: /* no automatic cascade events — just the clock and the prompt */ break;
+    case 10: _cascade10(); break;
   }
 }
 
@@ -570,6 +587,21 @@ function _cascade9() {
   schedule(90_000, () => triggerBreach(9));
 }
 
+function _cascade10() {
+  // 60-second final countdown — two feed events confirm what the voice announces.
+  schedule(5_000, () => pushEvent('tactical', {
+    type:        'IMPACT_INBOUND',
+    origin:      'MULTIPLE',
+    content:     'Impact windows closing. All confirmed launches still tracked. This terminal is the last active relay in this sector.',
+    anomalyFlag: true,
+  }));
+
+  schedule(25_000, () => pushEvent('diplomat', {
+    type:    'CHANNELS_DARK',
+    content: 'All diplomatic channels dark. No response on any frequency. The world ended before the advisory window closed.',
+  }));
+}
+
 // ── Breach handlers ────────────────────────────────────────────────────────
 
 function _breach(shiftNum) {
@@ -634,13 +666,15 @@ function _breach(shiftNum) {
       break;
 
     case 10:
-      // The final moment. Check all endgame conditions first — player action may have
-      // already set a state. If not, the clock reaches midnight.
+      // Player clicked DETONATE — endgame deferred to onDetonationComplete().
+      // Player did nothing — countdown hit zero — MIDNIGHT now.
       checkEndgameConditions();
-      if (!get(terminalState)) {
+      if (!get(terminalState) && !_detonationTriggered) {
         advance(600, 'FINAL_RECKONING');
       }
-      _lastEndgame = resolveTerminalState(get(terminalState), get(nature));
+      if (!_detonationTriggered) {
+        _lastEndgame = resolveTerminalState(get(terminalState), get(nature));
+      }
       break;
   }
 }
